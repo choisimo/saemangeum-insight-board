@@ -1,0 +1,318 @@
+{
+  "saemangeum_datasets": [
+    {
+      "dataset_name": "새만금 방조제 교통량",
+      "data_go_kr_url": "https://www.data.go.kr/data/15002284/fileData.do",
+      "uddi": "uddi:a2608cef-b4b7-4645-a5b1-9fc28bbe918a",
+      "request_number": "92753785",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "연간",
+      "input_parameters": {
+        "required": [
+          "기준일자 (YYYYMMDD)",
+          "출발지",
+          "도착지"
+        ],
+        "optional": [
+          "차량구분",
+          "시간대"
+        ]
+      },
+      "output_fields": [
+        "기준일자",
+        "출발지",
+        "도착지", 
+        "대형차량건수",
+        "소형차량건수",
+        "총교통량",
+        "시간대별통계"
+      ]
+    },
+    {
+      "dataset_name": "새만금사업 매립 정보",
+      "data_go_kr_url": "https://www.data.go.kr/data/15040597/fileData.do",
+      "uddi": "uddi:df247c12-617e-44aa-86fe-d08a37ed729f",
+      "request_number": "92753775",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "연간",
+      "input_parameters": {
+        "required": [
+          "권역명",
+          "용지구분",
+          "기준년도"
+        ],
+        "optional": [
+          "매립상태"
+        ]
+      },
+      "output_fields": [
+        "권역명",
+        "용지구분",
+        "계획면적",
+        "매립완료면적",
+        "매립진행면적",
+        "매립예정면적",
+        "진행률",
+        "완공예정일"
+      ]
+    },
+    {
+      "dataset_name": "새만금사업지역 지적공부",
+      "data_go_kr_url": "https://www.data.go.kr/data/15007965/fileData.do",
+      "uddi": "uddi:dd236945-0c76-455b-9c3f-b6e87041b8de",
+      "request_number": "92753765",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "연간",
+      "input_parameters": {
+        "required": [
+          "토지소재지 (군산/김제/부안)",
+          "본번",
+          "부번"
+        ],
+        "optional": [
+          "지목",
+          "소유자정보"
+        ]
+      },
+      "output_fields": [
+        "토지소재지",
+        "본번",
+        "부번",
+        "지목",
+        "면적",
+        "소유자명",
+        "지적상세내역",
+        "등록일자"
+      ]
+    },
+    {
+      "dataset_name": "새만금 투자 인센티브 보조금지원 현황",
+      "data_go_kr_url": "https://www.data.go.kr/data/15121622/fileData.do",
+      "uddi": "uddi:d8e95b9d-7808-4643-b2f5-c1fa1a649ede",
+      "request_number": "92753761",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "연간",
+      "input_parameters": {
+        "required": [
+          "지원연도",
+          "기업명",
+          "지원지역"
+        ],
+        "optional": [
+          "지원제도",
+          "지원상태"
+        ]
+      },
+      "output_fields": [
+        "지원연도",
+        "기업명",
+        "지원지역",
+        "지원제도명",
+        "지원내용",
+        "지원금액",
+        "지원상태",
+        "신청일자",
+        "승인일자"
+      ]
+    },
+    {
+      "dataset_name": "새만금사업지역 건축물 허가현황",
+      "data_go_kr_url": "https://www.data.go.kr/data/15006164/fileData.do",
+      "uddi": "uddi:55aa5c8a-090d-4db0-a99e-a20a2c9b4117",
+      "request_number": "92753730",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV"],
+      "update_cycle": "연간",
+      "input_parameters": {
+        "required": [
+          "허가일자",
+          "대지위치",
+          "건축구분"
+        ],
+        "optional": [
+          "건축주명",
+          "허가번호"
+        ]
+      },
+      "output_fields": [
+        "허가일자",
+        "건축주명",
+        "대지위치",
+        "건축구분",
+        "건축면적",
+        "연면적",
+        "착공처리일자",
+        "허가번호",
+        "용도"
+      ]
+    },
+    {
+      "dataset_name": "새만금지역 산업단지 유틸리티 현황",
+      "data_go_kr_url": "https://www.data.go.kr/data/15120069/fileData.do",
+      "uddi": "uddi:b763f323-2d2b-4ad3-aaab-91c1de9c4323",
+      "request_number": "92514555",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "수시(1회성)",
+      "input_parameters": {
+        "required": [
+          "유틸리티구분",
+          "공급자명"
+        ],
+        "optional": [
+          "지역구분"
+        ]
+      },
+      "output_fields": [
+        "유틸리티구분",
+        "공급자명",
+        "공급규모",
+        "여유량",
+        "공급능력",
+        "위치정보",
+        "비고사항"
+      ]
+    },
+    {
+      "dataset_name": "새만금 재생에너지 사업 정보",
+      "data_go_kr_url": "https://www.data.go.kr/data/15120068/fileData.do",
+      "uddi": "uddi:1743c432-d853-40d9-9c4a-9076e4f35ce9",
+      "request_number": "92514484",
+      "category": "산업고용",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "수시(1회성)",
+      "input_parameters": {
+        "required": [
+          "대상지역",
+          "발전유형"
+        ],
+        "optional": [
+          "사업자명",
+          "추진상태"
+        ]
+      },
+      "output_fields": [
+        "대상지역",
+        "발전유형",
+        "발전용량",
+        "사업면적",
+        "사업자명",
+        "추진상태",
+        "예상완공일",
+        "위치좌표"
+      ]
+    },
+    {
+      "dataset_name": "새만금개발청_기상정보초단기예보조회",
+      "data_go_kr_url": "https://www.data.go.kr/data/15120067/openapi/serviceDetail.do",
+      "uddi": "uddi:acd5c118-0357-42a4-83c5-ae09cdb47265",
+      "request_number": "92514455",
+      "category": "환경기상",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "수시(1회성)",
+      "input_parameters": {
+        "required": [
+          "기준일자 (YYYYMMDD)",
+          "예보시간 (HHMM)",
+          "nx (격자 X좌표)",
+          "ny (격자 Y좌표)"
+        ],
+        "optional": [
+          "numOfRows (한 페이지 결과 수)",
+          "pageNo (페이지번호)"
+        ]
+      },
+      "output_fields": [
+        "baseDate (발표일자)",
+        "baseTime (발표시각)",
+        "category (자료구분문자)",
+        "fcstDate (예보일자)",
+        "fcstTime (예보시각)",
+        "fcstValue (예보값)",
+        "nx (예보지점 X좌표)",
+        "ny (예보지점 Y좌표)"
+      ]
+    },
+    {
+      "dataset_name": "새만금개발청_기상정보초단기실황조회",
+      "data_go_kr_url": "https://www.data.go.kr/data/15120066/openapi/serviceDetail.do",
+      "uddi": "uddi:83bddb37-95d5-4fe1-8e1e-8d4e8d56e1f5",
+      "request_number": "92514381",
+      "category": "환경기상",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "수시(1회성)",
+      "input_parameters": {
+        "required": [
+          "기준일자 (YYYYMMDD)",
+          "관측시간 (HHMM)",
+          "nx (격자 X좌표)",
+          "ny (격자 Y좌표)"
+        ],
+        "optional": [
+          "numOfRows (한 페이지 결과 수)",
+          "pageNo (페이지번호)"
+        ]
+      },
+      "output_fields": [
+        "baseDate (관측일자)",
+        "baseTime (관측시각)",
+        "category (자료구분문자)",
+        "obsrValue (실황값)",
+        "nx (관측지점 X좌표)",
+        "ny (관측지점 Y좌표)"
+      ]
+    },
+    {
+      "dataset_name": "새만금산업단지 입주기업 계약 현황",
+      "data_go_kr_url": "https://www.data.go.kr/data/15120065/fileData.do",
+      "uddi": "uddi:ace5dd01-ee09-4bea-952c-f0bfef77fcb4",
+      "request_number": "92514334",
+      "category": "국토관리",
+      "provider": "새만금개발청",
+      "file_formats": ["CSV", "XML", "JSON"],
+      "update_cycle": "연간",
+      "input_parameters": {
+        "required": [
+          "계약일자",
+          "기업명"
+        ],
+        "optional": [
+          "업종구분",
+          "계약상태"
+        ]
+      },
+      "output_fields": [
+        "계약일자",
+        "기업명",
+        "입주구역",
+        "계약면적",
+        "업종구분",
+        "투자규모",
+        "계약상태",
+        "예상가동일",
+        "고용인원"
+      ]
+    }
+  ],
+  "summary": {
+    "total_datasets": 10,
+    "confirmed_links": 10,
+    "file_formats": ["CSV", "XML", "JSON"],
+    "update_cycles": ["연간", "수시(1회성)"],
+    "categories": ["국토관리", "환경기상", "산업고용"]
+  }
+}
+

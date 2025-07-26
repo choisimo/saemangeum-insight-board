@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Map, Building2, Zap, Droplets, Wind, Factory } from "lucide-react";
+import { useInvestmentData, useDatasets, useLandData } from "@/hooks/use-data";
+import type { InvestmentData, LandData, ReclaimData } from "@/lib/data-service";
+import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2 } from "lucide-react";
 
 interface DistrictData {
   id: string;
@@ -24,38 +26,40 @@ const districts: DistrictData[] = [
   { id: "6", name: "6공구", salesRate: 0, companies: 0, industry: "항공우주", status: "planned", area: 290 }
 ];
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed': return 'bg-success';
-    case 'in-progress': return 'bg-warning';
-    case 'planned': return 'bg-muted';
-    default: return 'bg-muted';
-  }
-};
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'completed': return '완료';
-    case 'in-progress': return '진행중';
-    case 'planned': return '계획';
-    default: return '미정';
-  }
-};
-
-const getIndustryIcon = (industry: string) => {
-  switch (industry) {
-    case '이차전지': return <Factory className="h-4 w-4" />;
-    case '재생에너지': return <Zap className="h-4 w-4" />;
-    case '스마트팜': return <Droplets className="h-4 w-4" />;
-    case 'IT융합': return <Building2 className="h-4 w-4" />;
-    case '바이오': return <Wind className="h-4 w-4" />;
-    default: return <Building2 className="h-4 w-4" />;
-  }
-};
-
 export function SaemangumMap() {
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictData | null>(null);
   const [viewMode, setViewMode] = useState<'sales' | 'companies' | 'industry'>('sales');
+  const { data: investmentData, loading: investmentLoading } = useInvestmentData();
+  const { datasets, loading: datasetsLoading } = useDatasets();
+  const { data: landData, loading: landLoading } = useLandData();
+
+  const loading = investmentLoading || datasetsLoading || landLoading;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">공간정보 데이터를 불러오는 중...</span>
+      </div>
+    );
+  }
+
+  // 실제 데이터를 기반으로 공구별 정보 업데이트
+  const updatedDistricts = districts.map(district => {
+    const relatedInvestments = investmentData.filter((inv: InvestmentData) => 
+      inv.location && inv.location.includes(district.name.replace('공구', ''))
+    );
+    
+    if (relatedInvestments.length > 0) {
+      return {
+        ...district,
+        companies: relatedInvestments.length,
+        salesRate: Math.round(relatedInvestments.reduce((avg: number, inv: InvestmentData) => avg + inv.progress, 0) / relatedInvestments.length)
+      };
+    }
+    
+    return district;
+  });
 
   const getDistrictColor = (district: DistrictData) => {
     switch (viewMode) {
@@ -80,6 +84,11 @@ export function SaemangumMap() {
         <CardTitle className="flex items-center space-x-2">
           <Map className="h-5 w-5 text-primary" />
           <span>새만금 공간정보 시스템</span>
+          {datasets && (
+            <Badge variant="outline" className="ml-auto">
+              {datasets.summary.categories.join(', ')} 데이터 연동
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -128,7 +137,7 @@ export function SaemangumMap() {
 
               {/* 공구 표시 (격자 형태로 배치) */}
               <div className="relative grid grid-cols-3 gap-4 h-full pt-12">
-                {districts.map((district, index) => (
+                {updatedDistricts.map((district, index) => (
                   <div
                     key={district.id}
                     className={`
@@ -244,7 +253,18 @@ export function SaemangumMap() {
 
           <TabsContent value="data" className="space-y-4">
             <div className="space-y-3">
-              {districts.map((district) => (
+              {landData.length > 0 && (
+                <Card className="p-4 mb-4 bg-primary/5">
+                  <div className="text-sm">
+                    <Badge variant="outline" className="mb-2">실제 지적 데이터</Badge>
+                    <p><strong>소재지:</strong> {'location' in landData[0] ? (landData[0] as LandData).location : (landData[0] as ReclaimData).region}</p>
+                    <p><strong>지목:</strong> {'landCategory' in landData[0] ? (landData[0] as LandData).landCategory : (landData[0] as ReclaimData).landType}</p>
+                    <p><strong>면적:</strong> {'area' in landData[0] ? (landData[0] as LandData).area : (landData[0] as ReclaimData).plannedArea}㎡</p>
+                    <p><strong>소유자:</strong> {'owner' in landData[0] ? (landData[0] as LandData).owner : '새만금개발청'}</p>
+                  </div>
+                </Card>
+              )}
+              {updatedDistricts.map((district) => (
                 <Card key={district.id} className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">

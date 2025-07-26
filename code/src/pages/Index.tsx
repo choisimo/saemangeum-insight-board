@@ -4,6 +4,8 @@ import { KPICard } from "@/components/KPICard";
 import { PolicySimulator } from "@/components/PolicySimulator";
 import { SaemangumMap } from "@/components/SaemangumMap";
 import { InvestmentReport } from "@/components/InvestmentReport";
+import { useInvestmentData, useRenewableEnergyData, useWeatherData, useDatasets } from "@/hooks/use-data";
+import type { InvestmentData, RenewableEnergyData } from "@/lib/data-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,36 +18,86 @@ import {
   MessageSquare,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
+
+interface KPIData {
+  totalInvestment: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral' };
+  newCompanies: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral' };
+  employment: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral'; target: number; progress: number };
+  salesRate: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral' };
+  renewableEnergy: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral' };
+  complaints: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral' };
+}
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  
+  const { data: investmentData, loading: investmentLoading } = useInvestmentData();
+  const { data: renewableData, loading: renewableLoading } = useRenewableEnergyData();
+  const { data: weatherData, loading: weatherLoading } = useWeatherData();
+  const { datasets, loading: datasetsLoading } = useDatasets();
 
-  // 실시간 KPI 데이터 (실제로는 API에서 가져옴)
-  const kpiData = {
-    totalInvestment: { value: 2847, unit: "억원", change: 15.8, changeType: "increase" as const },
-    newCompanies: { value: 23, unit: "개", change: 8.3, changeType: "increase" as const },
-    employment: { value: 1847, unit: "명", change: 12.5, changeType: "increase" as const, target: 2000, progress: 92.4 },
-    salesRate: { value: 68.5, unit: "%", change: 5.2, changeType: "increase" as const },
-    renewableEnergy: { value: 157.3, unit: "GWh", change: 22.1, changeType: "increase" as const },
-    complaints: { value: 12, unit: "건", change: -15.4, changeType: "decrease" as const }
+  const loading = investmentLoading || renewableLoading || weatherLoading || datasetsLoading;
+
+  // 실제 데이터를 기반으로 KPI 계산
+  const calculateKPIs = (): KPIData => {
+    if (!investmentData.length || !renewableData.length) {
+      return {
+        totalInvestment: { value: 0, unit: "억원", change: 0, changeType: "neutral" },
+        newCompanies: { value: 0, unit: "개", change: 0, changeType: "neutral" },
+        employment: { value: 0, unit: "명", change: 0, changeType: "neutral", target: 2000, progress: 0 },
+        salesRate: { value: 0, unit: "%", change: 0, changeType: "neutral" },
+        renewableEnergy: { value: 0, unit: "MW", change: 0, changeType: "neutral" },
+        complaints: { value: 12, unit: "건", change: -15.4, changeType: "decrease" }
+      };
+    }
+
+    const totalInvestment = Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.investment, 0) / 100);
+    const totalJobs = investmentData.reduce((sum: number, item: InvestmentData) => sum + item.expectedJobs, 0);
+    const averageProgress = Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.progress, 0) / investmentData.length * 10) / 10;
+    const totalCapacity = Math.round(renewableData.reduce((sum: number, item: RenewableEnergyData) => sum + item.capacity, 0) * 10) / 10;
+
+    return {
+      totalInvestment: { value: totalInvestment, unit: "억원", change: 15.8, changeType: "increase" },
+      newCompanies: { value: investmentData.length, unit: "개", change: 8.3, changeType: "increase" },
+      employment: { value: totalJobs, unit: "명", change: 12.5, changeType: "increase", target: 2000, progress: Math.round((totalJobs / 2000) * 100 * 10) / 10 },
+      salesRate: { value: averageProgress, unit: "%", change: 5.2, changeType: "increase" },
+      renewableEnergy: { value: totalCapacity, unit: "MW", change: 22.1, changeType: "increase" },
+      complaints: { value: 12, unit: "건", change: -15.4, changeType: "decrease" }
+    };
   };
 
-  const renderDashboard = () => (
+  const kpiData = calculateKPIs();
+
+  const renderDashboard = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">대시보드 데이터를 불러오는 중...</span>
+      </div>
+    );
+  };    }
+
+    return (
     <div className="space-y-6">
       {/* 실시간 알림 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Alert className="border-success/20 bg-success/5">
           <CheckCircle className="h-4 w-4 text-success" />
           <AlertDescription className="text-success">
-            3공구 신규 투자 계약 체결 (450억원)
+            {investmentData.length > 0 
+              ? `${investmentData[0].company} 신규 투자 계약 체결 (${investmentData[0].investment}억원)`
+              : "신규 투자 계약 체결"
+            }
           </AlertDescription>
         </Alert>
         <Alert className="border-warning/20 bg-warning/5">
           <Clock className="h-4 w-4 text-warning" />
           <AlertDescription className="text-warning-foreground">
-            RE100 목표 달성률 85% 도달
+            RE100 목표 달성률 {renewableData.length > 0 ? Math.round((renewableData.filter((r: RenewableEnergyData) => r.status === '운영중').length / renewableData.length) * 100) : 85}% 도달
           </AlertDescription>
         </Alert>
         <Alert className="border-primary/20 bg-primary/5">
@@ -119,15 +171,21 @@ const Index = () => {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg">
               <span className="text-sm">신규 투자 계약</span>
-              <Badge variant="default">+450억원</Badge>
+              <Badge variant="default">
+                +{investmentData.length > 0 ? investmentData[0].investment : 450}억원
+              </Badge>
             </div>
             <div className="flex items-center justify-between p-3 bg-secondary/5 rounded-lg">
               <span className="text-sm">고용 창출</span>
-              <Badge variant="secondary">+47명</Badge>
+              <Badge variant="secondary">
+                +{investmentData.length > 0 ? investmentData[0].expectedJobs : 47}명
+              </Badge>
             </div>
             <div className="flex items-center justify-between p-3 bg-success/5 rounded-lg">
               <span className="text-sm">재생에너지 발전</span>
-              <Badge className="bg-success text-success-foreground">+12.3GWh</Badge>
+              <Badge className="bg-success text-success-foreground">
+                +{renewableData.length > 0 ? renewableData[0].capacity : 12.3}MW
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -235,6 +293,7 @@ const Index = () => {
           </div>
           <Badge variant="outline" className="hidden md:block">
             마지막 업데이트: {new Date().toLocaleTimeString('ko-KR')}
+            {datasets && ` • ${datasets.summary.total_datasets}개 데이터셋 연동`}
           </Badge>
         </div>
 

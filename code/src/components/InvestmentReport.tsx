@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { useInvestmentData, useDatasets } from "@/hooks/use-data";
+import type { InvestmentData } from "@/lib/data-service";
 import { 
   Building2, 
   TrendingUp, 
@@ -10,81 +12,63 @@ import {
   DollarSign,
   FileText,
   Download,
-  Filter
+  Filter,
+  Loader2
 } from "lucide-react";
 
-export function InvestmentReport() {
-  // 투자 유치 데이터 (실제로는 API에서 가져옴)
-  const investmentData = [
-    {
-      id: 1,
-      company: "LG에너지솔루션",
-      sector: "이차전지",
-      investment: 28000,
-      stage: "착공",
-      progress: 65,
-      location: "3공구",
-      contractDate: "2024.03.15",
-      expectedJobs: 450,
-      status: "정상진행"
-    },
-    {
-      id: 2,
-      company: "한화큐셀",
-      sector: "태양광",
-      investment: 15000,
-      stage: "계약체결",
-      progress: 30,
-      location: "4공구",
-      contractDate: "2024.05.20",
-      expectedJobs: 280,
-      status: "정상진행"
-    },
-    {
-      id: 3,
-      company: "농심",
-      sector: "식품가공",
-      investment: 5500,
-      stage: "준공",
-      progress: 95,
-      location: "1공구",
-      contractDate: "2023.08.10",
-      expectedJobs: 150,
-      status: "완료임박"
-    },
-    {
-      id: 4,
-      company: "현대자동차",
-      sector: "모빌리티",
-      investment: 35000,
-      stage: "협상중",
-      progress: 15,
-      location: "미정",
-      contractDate: "협상중",
-      expectedJobs: 600,
-      status: "검토중"
-    },
-    {
-      id: 5,
-      company: "KT",
-      sector: "ICT",
-      investment: 8000,
-      stage: "착공",
-      progress: 40,
-      location: "2공구",
-      contractDate: "2024.01.25",
-      expectedJobs: 120,
-      status: "정상진행"
-    }
-  ];
+interface SectorSummary {
+  sector: string;
+  companies: number;
+  investment: number;
+  progress: number;
+}
 
-  const sectorSummary = [
-    { sector: "이차전지", companies: 3, investment: 45000, progress: 52 },
-    { sector: "재생에너지", companies: 5, investment: 32000, progress: 67 },
-    { sector: "스마트팜", companies: 2, investment: 12000, progress: 80 },
-    { sector: "ICT", companies: 4, investment: 18000, progress: 45 },
-    { sector: "식품가공", companies: 3, investment: 9500, progress: 75 }
-  ];
+export function InvestmentReport() {
+  const { data: investmentData, loading, error } = useInvestmentData();
+  const { datasets } = useDatasets();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">투자 데이터를 불러오는 중...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8 text-destructive">
+        <p>데이터를 불러오는 중 오류가 발생했습니다: {error}</p>
+      </div>
+    );
+  }
+
+  // 실제 데이터를 기반으로 동적으로 계산
+  const sectorSummary: SectorSummary[] = investmentData.reduce((acc: SectorSummary[], item: InvestmentData) => {
+    const existingSector = acc.find(s => s.sector === item.sector);
+    if (existingSector) {
+      existingSector.companies += 1;
+      existingSector.investment += item.investment;
+      existingSector.progress = Math.round((existingSector.progress + item.progress) / 2);
+    } else {
+      acc.push({
+        sector: item.sector,
+        companies: 1,
+        investment: item.investment,
+        progress: item.progress
+      });
+    }
+    return acc;
+  }, []);
+
+  // 통계 계산
+  const totalCompanies = investmentData.length;
+  const totalInvestment = investmentData.reduce((sum: number, item: InvestmentData) => sum + item.investment, 0);
+  const averageProgress = investmentData.length > 0 
+    ? Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.progress, 0) / investmentData.length * 10) / 10
+    : 0;
+  const totalExpectedJobs = investmentData.reduce((sum: number, item: InvestmentData) => sum + item.expectedJobs, 0);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -115,7 +99,7 @@ export function InvestmentReport() {
               <Building2 className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">총 투자기업</p>
-                <p className="text-2xl font-bold">17개사</p>
+                <p className="text-2xl font-bold">{totalCompanies}개사</p>
               </div>
             </div>
           </CardContent>
@@ -127,7 +111,7 @@ export function InvestmentReport() {
               <DollarSign className="h-5 w-5 text-success" />
               <div>
                 <p className="text-sm text-muted-foreground">총 투자액</p>
-                <p className="text-2xl font-bold">1,165억원</p>
+                <p className="text-2xl font-bold">{Math.round(totalInvestment/100)}억원</p>
               </div>
             </div>
           </CardContent>
@@ -139,7 +123,7 @@ export function InvestmentReport() {
               <TrendingUp className="h-5 w-5 text-secondary" />
               <div>
                 <p className="text-sm text-muted-foreground">평균 진행률</p>
-                <p className="text-2xl font-bold">51.4%</p>
+                <p className="text-2xl font-bold">{averageProgress}%</p>
               </div>
             </div>
           </CardContent>
@@ -151,7 +135,7 @@ export function InvestmentReport() {
               <MapPin className="h-5 w-5 text-accent" />
               <div>
                 <p className="text-sm text-muted-foreground">예상 고용</p>
-                <p className="text-2xl font-bold">1,600명</p>
+                <p className="text-2xl font-bold">{totalExpectedJobs.toLocaleString()}명</p>
               </div>
             </div>
           </CardContent>
@@ -191,12 +175,16 @@ export function InvestmentReport() {
       {/* 기업별 상세 현황 */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center space-x-2">
-              <Building2 className="h-5 w-5" />
-              <span>기업별 투자 진행 현황</span>
-            </CardTitle>
-            <div className="flex space-x-2">
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center space-x-2">
+                <Building2 className="h-5 w-5" />
+                <span>기업별 투자 진행 현황</span>
+                {datasets && (
+                  <Badge variant="outline" className="ml-2">
+                    데이터 소스: {datasets.summary.total_datasets}개 데이터셋
+                  </Badge>
+                )}
+              </CardTitle>            <div className="flex space-x-2">
               <Button variant="outline" size="sm">
                 <Filter className="h-4 w-4 mr-1" />
                 필터
