@@ -1,1 +1,0 @@
-# saemangeum-insight-board
