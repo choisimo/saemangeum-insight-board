@@ -1,0 +1,111 @@
+# 새만금 인사이트 대시보드 - 데이터셋 .gitignore
+# Saemangeum Insight Dashboard - Datasets Git Ignore
+
+# ===== 민감한 데이터 (Sensitive Data) =====
+# 실제 개인정보 포함 가능한 데이터
+real-data/
+production-data/
+sensitive/
+personal/
+private/
+
+# API 키가 포함된 응답 샘플
+api-responses/with-keys/
+samples/authenticated/
+
+# ===== 대용량 데이터 파일 (Large Data Files) =====
+# 대용량 CSV 파일 (100MB 초과)
+*.large.csv
+*_large.csv
+large-datasets/
+
+# 압축된 데이터
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 바이너리 데이터 파일
+*.bin
+*.dat
+
+# ===== 백업 및 임시 파일 (Backup & Temporary) =====
+# 데이터 백업
+backup/
+*.backup
+*.bak
+*.old
+
+# 임시 처리 파일
+temp/
+tmp/
+processing/
+*.tmp
+*.temp
+
+# ===== 프로세싱 결과물 (Processing Results) =====
+# 데이터 정제 결과
+cleaned/
+processed/
+transformed/
+
+# 분석 결과 (재생성 가능한)
+analysis/
+reports/generated/
+statistics/
+
+# ===== 캐시 파일 (Cache Files) =====
+# 데이터 캐시
+cache/
+.cache/
+*.cache
+
+# 인덱스 파일
+*.index
+*.idx
+
+# ===== 로그 파일 (Log Files) =====
+# 데이터 처리 로그
+processing.log
+import.log
+export.log
+error.log
+
+# ===== 개발용 테스트 데이터 (Development Test Data) =====
+# 개발자 개인 테스트 데이터
+dev-test/
+personal-test/
+local-test/
+
+# 실험용 데이터
+experiments/
+sandbox/
+
+# ===== 운영체제 파일 (OS Files) =====
+.DS_Store
+Thumbs.db
+*.lnk
+
+# ===== 특정 확장자 제외 (Specific Extensions) =====
+# Excel 임시 파일
+~$*.xlsx
+~$*.xls
+
+# CSV 백업 파일
+*.csv.backup
+*.csv.bak
+
+# ===== 허용된 파일들 (Allowed Files) =====
+# 공개 가능한 샘플 데이터는 포함
+!sample/
+!examples/
+!api/data.json
+
+# 문서화용 작은 데이터셋은 허용
+!documentation/
+!schema/
+
+# README 및 설명 파일은 허용
+!README.md
+!*.md
+!*.txt

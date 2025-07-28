@@ -1,0 +1,97 @@
+# 새만금 인사이트 대시보드 - 문서 .gitignore
+# Saemangeum Insight Dashboard - Documentation Git Ignore
+
+# ===== 민감한 문서 (Sensitive Documents) =====
+# 내부 전용 문서
+internal/
+confidential/
+private/
+sensitive/
+
+# API 키 및 인증 정보 포함 문서
+*-keys.md
+*-credentials.md
+*-secrets.md
+api-keys/
+credentials/
+
+# ===== 임시 문서 (Temporary Documents) =====
+# 작업 중인 초안
+draft/
+temp/
+tmp/
+*.draft.md
+*.temp.md
+*.tmp.md
+
+# 백업 파일
+*.backup
+*.bak
+*.old
+
+# ===== 자동 생성 문서 (Auto-generated Documents) =====
+# API 문서 (자동 생성되는 경우)
+api-docs/generated/
+swagger-docs/
+openapi-generated/
+
+# 코드 문서 (자동 생성)
+code-docs/
+typedoc/
+jsdoc/
+
+# ===== 에디터 파일 (Editor Files) =====
+# Markdown 에디터 임시 파일
+*.md~
+*.md.backup
+.markdownlint-cli2.jsonc
+
+# Notion, Obsidian 등 에디터 파일
+.obsidian/
+.notion/
+
+# ===== 이미지 및 미디어 (Images & Media) =====
+# 고해상도 원본 이미지 (용량 큰 파일)
+images/original/
+images/raw/
+*.original.png
+*.original.jpg
+*.original.jpeg
+
+# 비디오 파일 (용량 제한)
+videos/
+*.mp4
+*.mov
+*.avi
+
+# ===== PDF 및 오피스 파일 (PDF & Office Files) =====
+# 생성된 PDF (소스가 있는 경우)
+*.generated.pdf
+output/
+
+# Office 임시 파일
+~$*.docx
+~$*.pptx
+~$*.xlsx
+
+# ===== 운영체제 파일 (OS Files) =====
+.DS_Store
+Thumbs.db
+*.lnk
+
+# ===== 기타 임시 파일 (Other Temporary Files) =====
+*~
+*.swp
+*.swo
+
+# ===== 허용된 파일들 (Allowed Files) =====
+# 공개 문서는 허용
+!README.md
+!*.md
+!images/public/
+!diagrams/
+
+# 라이선스 및 공개 정보
+!LICENSE*
+!CHANGELOG*
+!CONTRIBUTING*

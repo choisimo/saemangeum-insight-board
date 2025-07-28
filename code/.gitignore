@@ -1,4 +1,7 @@
-# Logs
+# 새만금 인사이트 대시보드 - 코드 디렉토리 .gitignore
+# Saemangeum Insight Dashboard - Code Directory Git Ignore
+
+# ===== 로그 파일 (Log Files) =====
 logs
 *.log
 npm-debug.log*
@@ -7,18 +10,240 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# ===== 런타임 파일 (Runtime Files) =====
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ===== 의존성 및 빌드 (Dependencies & Build) =====
+# 의존성
 node_modules
+jspm_packages/
+
+# 빌드 결과물
 dist
 dist-ssr
+build
+out
+.next
+.nuxt
+.vuepress/dist
+.serverless/
+
+# 번들 분석
+bundle-analyzer-report.html
+stats.json
+
+# ===== 환경변수 및 설정 (Environment & Config) =====
+# 환경변수 파일
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
+# 설정 파일 백업
+config.backup.*
+*.config.local
+
+# ===== 캐시 및 임시 파일 (Cache & Temporary) =====
+# 패키지 매니저 캐시
+.npm
+.eslintcache
+.stylelintcache
+.parcel-cache
+
+# Yarn
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# 임시 파일
+*.tmp
+*.temp
+.tmp
+.temp
 *.local
 
-# Editor directories and files
+# ===== 테스트 및 커버리지 (Testing & Coverage) =====
+# 테스트 커버리지
+coverage
+*.lcov
+.nyc_output
+
+# Jest
+.jest
+
+# Vitest
+.vitest
+
+# 테스트 결과
+test-results
+junit.xml
+
+# ===== 에디터 및 IDE (Editors & IDEs) =====
+# Visual Studio Code
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# JetBrains
 .idea
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+.emacs.desktop
+.emacs.desktop.lock
+
+# ===== 운영체제 파일 (OS Files) =====
+# macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ===== Node.js 관련 (Node.js Specific) =====
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# ===== 프런트엔드 도구 (Frontend Tools) =====
+# Storybook build outputs
+storybook-static
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite
+
+# Rollup
+.rollup.cache
+
+# Parcel
+.cache
+.parcel-cache
+
+# ===== 보안 관련 (Security) =====
+# API 키 및 민감한 정보
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# 실제 API 응답 샘플 (개발용)
+api-samples/real/
+responses/production/
+
+# ===== 개발 도구 (Development Tools) =====
+# Cypress
+cypress/screenshots
+cypress/videos
+
+# Playwright
+test-results/
+playwright-report/
+
+# ===== 모니터링 및 분석 (Monitoring & Analytics) =====
+# Bundle analyzer
+webpack-bundle-analyzer-report.html
+
+# Lighthouse reports
+lighthouse-report.html
+lighthouse-report.json
+
+# Performance monitoring
+*.cpuprofile
+*.heapprofile
+
+# ===== 기타 (Miscellaneous) =====
+# Lock files (depending on package manager preference)
+# package-lock.json  # Uncomment if using yarn
+# yarn.lock          # Uncomment if using npm
+
+# Auto-generated files
+auto-imports.d.ts
+components.d.ts
+
+# Temporary directories
+tmp/
+temp/
+
+# Editor directories and files
 *.suo
 *.ntvs*
-*.njsproj
+*.njsproj*
 *.sln
 *.sw?
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Database files (if any local DBs for development)
+*.sqlite
+*.sqlite3
+*.db
+
+# Certificate files
+*.crt
+*.cer
+
+# Local development overrides
+*.local.*
+local.*

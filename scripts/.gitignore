@@ -1,0 +1,32 @@
+# 스크립트 디렉토리 .gitignore
+# Scripts Directory Git Ignore
+
+# 실행 결과 로그
+*.execution.log
+script.log
+output.log
+
+# 임시 스크립트
+temp/
+tmp/
+*.tmp.sh
+*.temp.sh
+
+# 개인 설정 스크립트
+personal/
+local/
+dev-only/
+
+# 백업 파일
+*.backup
+*.bak
+*.old
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# 허용: 공개 스크립트는 포함
+!setup-*.sh
+!install-*.sh
+!build-*.sh

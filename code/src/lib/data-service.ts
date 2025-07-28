@@ -1,3 +1,5 @@
+import { httpClient, buildApiParams, withRetry, API_ENDPOINTS, ApiResponse } from './api-client';
+
 interface Dataset {
   dataset_name: string;
   data_go_kr_url: string;
@@ -25,6 +27,94 @@ interface DataResponse {
   };
 }
 
+// 실제 API 응답 인터페이스들
+interface ApiInvestmentData {
+  사업자명?: string;
+  업종?: string;
+  투자규모?: string;
+  사업추진단계?: string;
+  사업진행률?: string;
+  사업위치?: string;
+  계약일자?: string;
+  예상고용인원?: string;
+  사업현황?: string;
+}
+
+interface ApiTrafficData {
+  조사일자?: string;
+  출발지?: string;
+  도착지?: string;
+  대형차?: string;
+  소형차?: string;
+  전체교통량?: string;
+  시간대별통계?: string;
+}
+
+interface ApiRenewableEnergyData {
+  지역?: string;
+  발전유형?: string;
+  설비용량?: string;
+  부지면적?: string;
+  사업자?: string;
+  사업현황?: string;
+  준공예정일?: string;
+  위도?: string;
+  경도?: string;
+}
+
+interface ApiWeatherData {
+  baseDate?: string;
+  baseTime?: string;
+  category?: string;
+  obsrValue?: string;
+  nx?: string;
+  ny?: string;
+}
+
+interface ApiLandData {
+  위치?: string;
+  본번?: string;
+  부번?: string;
+  지목?: string;
+  면적?: string;
+  소유자?: string;
+  등록일자?: string;
+}
+
+interface ApiReclaimData {
+  지구명?: string;
+  용지유형?: string;
+  계획면적?: string;
+  준공면적?: string;
+  시행면적?: string;
+  예정면적?: string;
+  진행률?: string;
+  준공일?: string;
+}
+
+interface ApiBuildingPermitData {
+  허가일자?: string;
+  건축주명?: string;
+  대지위치?: string;
+  건물유형?: string;
+  건축면적?: string;
+  연면적?: string;
+  착공예정일?: string;
+  허가번호?: string;
+  용도?: string;
+}
+
+interface ApiUtilityData {
+  유틸리티종류?: string;
+  공급업체?: string;
+  공급용량?: string;
+  가용용량?: string;
+  공급능력?: string;
+  위치?: string;
+  비고?: string;
+}
+
+// 변환된 데이터 인터페이스들
 interface InvestmentData {
   id: number;
   company: string;
@@ -126,6 +216,26 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
+// 데이터 변환 유틸리티 함수들
+const parseNumber = (value: string | undefined, defaultValue: number = 0): number => {
+  if (!value) return defaultValue;
+  const parsed = parseFloat(value.replace(/[^\d.-]/g, ''));
+  return isNaN(parsed) ? defaultValue : parsed;
+};
+
+const parseString = (value: string | undefined, defaultValue: string = ''): string => {
+  return value?.trim() || defaultValue;
+};
+
+const parseDate = (value: string | undefined): string => {
+  if (!value) return new Date().toISOString().split('T')[0];
+  // YYYYMMDD 형식을 YYYY-MM-DD로 변환
+  if (value.length === 8 && /^\d{8}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+  }
+  return value;
+};
+
 export class DataService {
   private static instance: DataService;
   private cache: Map<string, CacheEntry<unknown>> = new Map();
@@ -177,72 +287,77 @@ export class DataService {
   }
 
   async getInvestmentData(): Promise<InvestmentData[]> {
+    const cacheKey = 'investment_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<InvestmentData[]> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+
     try {
-      const investmentDataset = await this.getDatasetByName('새만금 투자 인센티브 보조금지원 현황');
-      const companiesDataset = await this.getDatasetByName('새만금산업단지 입주기업 계약 현황');
-      
-      // 실제 데이터를 기반으로 하는 투자 데이터 구조
-      return [
-        {
-          id: 1,
-          company: "LG에너지솔루션",
-          sector: "이차전지",
-          investment: 28000,
-          stage: "착공",
-          progress: 65,
-          location: "3공구",
-          contractDate: "2024.03.15",
-          expectedJobs: 450,
-          status: "정상진행",
-          dataSource: investmentDataset?.dataset_name || "기본값"
-        },
-        {
-          id: 2,
-          company: "한화큐셀",
-          sector: "태양광",
-          investment: 15000,
-          stage: "계약체결",
-          progress: 30,
-          location: "4공구",
-          contractDate: "2024.05.20",
-          expectedJobs: 280,
-          status: "정상진행",
-          dataSource: companiesDataset?.dataset_name || "기본값"
-        }
-      ];
+      const params = buildApiParams({ perPage: 100 });
+      const response = await withRetry(() => 
+        httpClient.get<ApiResponse<ApiInvestmentData>>(API_ENDPOINTS.INVESTMENT_INCENTIVES, params)
+      );
+
+      const transformedData: InvestmentData[] = response.data.map((item, index) => ({
+        id: index + 1,
+        company: parseString(item.사업자명, `기업 ${index + 1}`),
+        sector: parseString(item.업종, '일반 제조업'),
+        investment: parseNumber(item.투자규모),
+        stage: parseString(item.사업추진단계, '계획'),
+        progress: parseNumber(item.사업진행률),
+        location: parseString(item.사업위치, '새만금'),
+        contractDate: parseDate(item.계약일자),
+        expectedJobs: parseNumber(item.예상고용인원),
+        status: parseString(item.사업현황, '진행중'),
+        dataSource: '새만금 투자 인센티브 보조금지원 현황'
+      }));
+
+      this.cache.set(cacheKey, {
+        data: transformedData,
+        timestamp: Date.now()
+      });
+
+      return transformedData;
     } catch (error) {
       console.error('Error loading investment data:', error);
+      // 에러 시 빈 배열 반환
       return [];
     }
   }
 
   async getTrafficData(): Promise<TrafficData[]> {
-    try {
-      const trafficDataset = await this.getDatasetByName('새만금 방조제 교통량');
-      
-      if (!trafficDataset) {
-        throw new Error('Traffic dataset not found');
-      }
+    const cacheKey = 'traffic_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<TrafficData[]> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
 
-      // 실제 데이터 구조를 기반으로 한 교통량 데이터
-      return [
-        {
-          date: "20241125",
-          departure: "군산",
-          destination: "새만금",
-          largeVehicles: 1250,
-          smallVehicles: 8340,
-          totalTraffic: 9590,
-          timeStatistics: {
-            "06-09": 2150,
-            "09-12": 1890,
-            "12-15": 2340,
-            "15-18": 2410,
-            "18-21": 800
-          },
-          dataSource: trafficDataset.dataset_name
-        }
-      ];
+    try {
+      const params = buildApiParams({ perPage: 100 });
+      const response = await withRetry(() => 
+        httpClient.get<ApiResponse<ApiTrafficData>>(API_ENDPOINTS.TRAFFIC_DATA, params)
+      );
+
+      const transformedData: TrafficData[] = response.data.map(item => ({
+        date: parseString(item.조사일자, new Date().toISOString().split('T')[0]),
+        departure: parseString(item.출발지, '군산'),
+        destination: parseString(item.도착지, '새만금'),
+        largeVehicles: parseNumber(item.대형차),
+        smallVehicles: parseNumber(item.소형차),
+        totalTraffic: parseNumber(item.전체교통량),
+        timeStatistics: this.parseTimeStatistics(item.시간대별통계),
+        dataSource: '새만금 방조제 교통량'
+      }));
+
+      this.cache.set(cacheKey, {
+        data: transformedData,
+        timestamp: Date.now()
+      });
+
+      return transformedData;
     } catch (error) {
       console.error('Error loading traffic data:', error);
       return [];
@@ -250,37 +365,40 @@ export class DataService {
   }
 
   async getRenewableEnergyData(): Promise<RenewableEnergyData[]> {
-    try {
-      const renewableDataset = await this.getDatasetByName('새만금 재생에너지 사업 정보');
-      
-      if (!renewableDataset) {
-        throw new Error('Renewable energy dataset not found');
-      }
+    const cacheKey = 'renewable_energy_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<RenewableEnergyData[]> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
 
-      return [
-        {
-          region: "3공구",
-          generationType: "태양광",
-          capacity: 150.5,
-          area: 340,
-          operator: "한화큐셀",
-          status: "운영중",
-          expectedCompletion: "2024-12-31",
-          coordinates: { lat: 35.7983, lng: 126.7041 },
-          dataSource: renewableDataset.dataset_name
+    try {
+      const params = buildApiParams({ perPage: 100 });
+      const response = await withRetry(() => 
+        httpClient.get<ApiResponse<ApiRenewableEnergyData>>(API_ENDPOINTS.RENEWABLE_ENERGY, params)
+      );
+
+      const transformedData: RenewableEnergyData[] = response.data.map(item => ({
+        region: parseString(item.지역, '새만금'),
+        generationType: parseString(item.발전유형, '태양광'),
+        capacity: parseNumber(item.설비용량),
+        area: parseNumber(item.부지면적),
+        operator: parseString(item.사업자, '미정'),
+        status: parseString(item.사업현황, '계획중'),
+        expectedCompletion: parseDate(item.준공예정일),
+        coordinates: {
+          lat: parseNumber(item.위도, 35.7983),
+          lng: parseNumber(item.경도, 126.7041)
         },
-        {
-          region: "4공구",
-          generationType: "풍력",
-          capacity: 95.2,
-          area: 280,
-          operator: "LG에너지솔루션",
-          status: "건설중",
-          expectedCompletion: "2025-06-30",
-          coordinates: { lat: 35.8123, lng: 126.7234 },
-          dataSource: renewableDataset.dataset_name
-        }
-      ];
+        dataSource: '새만금 재생에너지 사업 정보'
+      }));
+
+      this.cache.set(cacheKey, {
+        data: transformedData,
+        timestamp: Date.now()
+      });
+
+      return transformedData;
     } catch (error) {
       console.error('Error loading renewable energy data:', error);
       return [];
@@ -288,38 +406,41 @@ export class DataService {
   }
 
   async getWeatherData(): Promise<WeatherData | null> {
+    const cacheKey = 'weather_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<WeatherData> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+
     try {
-      const weatherDataset = await this.getDatasetByName('새만금개발청_기상정보초단기실황조회');
-      
-      if (!weatherDataset) {
-        throw new Error('Weather dataset not found');
+      const params = buildApiParams({ perPage: 50 });
+      const response = await withRetry(() => 
+        httpClient.get<ApiResponse<ApiWeatherData>>(API_ENDPOINTS.WEATHER_CURRENT, params)
+      );
+
+      if (response.data.length === 0) {
+        return null;
       }
 
-      return {
-        baseDate: "20241125",
-        baseTime: "1400",
-        observations: [
-          {
-            category: "T1H",
-            obsrValue: "15.2",
-            nx: 243,
-            ny: 517
-          },
-          {
-            category: "RN1",
-            obsrValue: "0.0",
-            nx: 243,
-            ny: 517
-          },
-          {
-            category: "WSD",
-            obsrValue: "3.2",
-            nx: 243,
-            ny: 517
-          }
-        ],
-        dataSource: weatherDataset.dataset_name
+      const weatherData: WeatherData = {
+        baseDate: parseString(response.data[0]?.baseDate, new Date().toISOString().split('T')[0].replace(/-/g, '')),
+        baseTime: parseString(response.data[0]?.baseTime, '1400'),
+        observations: response.data.map(item => ({
+          category: parseString(item.category, 'T1H'),
+          obsrValue: parseString(item.obsrValue, '0'),
+          nx: parseNumber(item.nx, 243),
+          ny: parseNumber(item.ny, 517)
+        })),
+        dataSource: '새만금개발청_기상정보초단기실황조회'
       };
+
+      this.cache.set(cacheKey, {
+        data: weatherData,
+        timestamp: Date.now()
+      });
+
+      return weatherData;
     } catch (error) {
       console.error('Error loading weather data:', error);
       return null;
@@ -327,33 +448,54 @@ export class DataService {
   }
 
   async getLandData(): Promise<Array<LandData | ReclaimData>> {
+    const cacheKey = 'land_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<Array<LandData | ReclaimData>> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+
     try {
-      const landDataset = await this.getDatasetByName('새만금사업지역 지적공부');
-      const reclaimDataset = await this.getDatasetByName('새만금사업 매립 정보');
-      
-      return [
-        {
-          location: "군산",
-          mainNumber: "1234",
-          subNumber: "5",
-          landCategory: "공장용지",
-          area: 1250.5,
-          owner: "새만금개발청",
-          registrationDate: "2024-03-15",
-          dataSource: landDataset?.dataset_name || "기본값"
-        },
-        {
-          region: "3공구",
-          landType: "산업용지",
-          plannedArea: 450.0,
-          completedArea: 292.5,
-          inProgressArea: 157.5,
-          scheduledArea: 0.0,
-          progressRate: 65.0,
-          completionDate: "2025-12-31",
-          dataSource: reclaimDataset?.dataset_name || "기본값"
-        }
-      ];
+      const [landResponse, reclaimResponse] = await Promise.all([
+        withRetry(() => 
+          httpClient.get<ApiResponse<ApiLandData>>(API_ENDPOINTS.LAND_REGISTRY, buildApiParams({ perPage: 50 }))
+        ),
+        withRetry(() => 
+          httpClient.get<ApiResponse<ApiReclaimData>>(API_ENDPOINTS.RECLAMATION_INFO, buildApiParams({ perPage: 50 }))
+        )
+      ]);
+
+      const landData: LandData[] = landResponse.data.map(item => ({
+        location: parseString(item.위치, '새만금'),
+        mainNumber: parseString(item.본번, '0'),
+        subNumber: parseString(item.부번, '0'),
+        landCategory: parseString(item.지목, '일반'),
+        area: parseNumber(item.면적),
+        owner: parseString(item.소유자, '새만금개발청'),
+        registrationDate: parseDate(item.등록일자),
+        dataSource: '새만금사업지역 지적공부'
+      }));
+
+      const reclaimData: ReclaimData[] = reclaimResponse.data.map(item => ({
+        region: parseString(item.지구명, '새만금'),
+        landType: parseString(item.용지유형, '산업용지'),
+        plannedArea: parseNumber(item.계획면적),
+        completedArea: parseNumber(item.준공면적),
+        inProgressArea: parseNumber(item.시행면적),
+        scheduledArea: parseNumber(item.예정면적),
+        progressRate: parseNumber(item.진행률),
+        completionDate: parseDate(item.준공일),
+        dataSource: '새만금사업 매립 정보'
+      }));
+
+      const combinedData = [...landData, ...reclaimData];
+
+      this.cache.set(cacheKey, {
+        data: combinedData,
+        timestamp: Date.now()
+      });
+
+      return combinedData;
     } catch (error) {
       console.error('Error loading land data:', error);
       return [];
@@ -361,27 +503,38 @@ export class DataService {
   }
 
   async getBuildingPermitData(): Promise<BuildingPermitData[]> {
-    try {
-      const buildingDataset = await this.getDatasetByName('새만금사업지역 건축물 허가현황');
-      
-      if (!buildingDataset) {
-        throw new Error('Building permit dataset not found');
-      }
+    const cacheKey = 'building_permit_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<BuildingPermitData[]> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
 
-      return [
-        {
-          permitDate: "2024-03-15",
-          builderName: "LG에너지솔루션",
-          siteLocation: "새만금 3공구",
-          buildingType: "공장",
-          buildingArea: 5500.0,
-          totalFloorArea: 12500.0,
-          constructionStartDate: "2024-04-01",
-          permitNumber: "2024-0315-001",
-          usage: "이차전지 제조시설",
-          dataSource: buildingDataset.dataset_name
-        }
-      ];
+    try {
+      const params = buildApiParams({ perPage: 100 });
+      const response = await withRetry(() => 
+        httpClient.get<ApiResponse<ApiBuildingPermitData>>(API_ENDPOINTS.BUILDING_PERMITS, params)
+      );
+
+      const transformedData: BuildingPermitData[] = response.data.map(item => ({
+        permitDate: parseDate(item.허가일자),
+        builderName: parseString(item.건축주명, '미정'),
+        siteLocation: parseString(item.대지위치, '새만금'),
+        buildingType: parseString(item.건물유형, '일반건축물'),
+        buildingArea: parseNumber(item.건축면적),
+        totalFloorArea: parseNumber(item.연면적),
+        constructionStartDate: parseDate(item.착공예정일),
+        permitNumber: parseString(item.허가번호, '미부여'),
+        usage: parseString(item.용도, '일반시설'),
+        dataSource: '새만금사업지역 건축물 허가현황'
+      }));
+
+      this.cache.set(cacheKey, {
+        data: transformedData,
+        timestamp: Date.now()
+      });
+
+      return transformedData;
     } catch (error) {
       console.error('Error loading building permit data:', error);
       return [];
@@ -389,38 +542,66 @@ export class DataService {
   }
 
   async getUtilityData(): Promise<UtilityData[]> {
-    try {
-      const utilityDataset = await this.getDatasetByName('새만금지역 산업단지 유틸리티 현황');
-      
-      if (!utilityDataset) {
-        throw new Error('Utility dataset not found');
-      }
+    const cacheKey = 'utility_data';
+    const cached = this.cache.get(cacheKey) as CacheEntry<UtilityData[]> | undefined;
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
 
-      return [
-        {
-          utilityType: "전력",
-          supplier: "한국전력공사",
-          supplyCapacity: "500MW",
-          availableCapacity: "125MW",
-          supplyAbility: "안정적",
-          location: "새만금 3공구",
-          remarks: "신재생에너지 연계 가능",
-          dataSource: utilityDataset.dataset_name
-        },
-        {
-          utilityType: "용수",
-          supplier: "새만금개발청",
-          supplyCapacity: "50,000톤/일",
-          availableCapacity: "12,500톤/일",
-          supplyAbility: "충분",
-          location: "새만금 전체",
-          remarks: "공업용수 및 생활용수",
-          dataSource: utilityDataset.dataset_name
-        }
-      ];
+    try {
+      const params = buildApiParams({ perPage: 100 });
+      const response = await withRetry(() => 
+        httpClient.get<ApiResponse<ApiUtilityData>>(API_ENDPOINTS.UTILITY_STATUS, params)
+      );
+
+      const transformedData: UtilityData[] = response.data.map(item => ({
+        utilityType: parseString(item.유틸리티종류, '전력'),
+        supplier: parseString(item.공급업체, '한국전력공사'),
+        supplyCapacity: parseString(item.공급용량, '0MW'),
+        availableCapacity: parseString(item.가용용량, '0MW'),
+        supplyAbility: parseString(item.공급능력, '안정적'),
+        location: parseString(item.위치, '새만금'),
+        remarks: parseString(item.비고, ''),
+        dataSource: '새만금지역 산업단지 유틸리티 현황'
+      }));
+
+      this.cache.set(cacheKey, {
+        data: transformedData,
+        timestamp: Date.now()
+      });
+
+      return transformedData;
     } catch (error) {
       console.error('Error loading utility data:', error);
       return [];
+    }
+  }
+
+  private parseTimeStatistics(timeData: string | undefined): Record<string, number> {
+    if (!timeData) {
+      return {
+        "06-09": 0,
+        "09-12": 0,
+        "12-15": 0,
+        "15-18": 0,
+        "18-21": 0
+      };
+    }
+
+    try {
+      // JSON 형태로 파싱 시도
+      const parsed = JSON.parse(timeData);
+      return parsed;
+    } catch {
+      // JSON이 아닌 경우 기본값 반환
+      return {
+        "06-09": 0,
+        "09-12": 0,
+        "12-15": 0,
+        "15-18": 0,
+        "18-21": 0
+      };
     }
   }
 

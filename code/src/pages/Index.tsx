@@ -4,6 +4,12 @@ import { KPICard } from "@/components/KPICard";
 import { PolicySimulator } from "@/components/PolicySimulator";
 import { SaemangumMap } from "@/components/SaemangumMap";
 import { InvestmentReport } from "@/components/InvestmentReport";
+import { 
+  ApiError, 
+  CardLoadingSkeleton, 
+  NetworkStatus, 
+  DataQualityIndicator 
+} from "@/components/ErrorBoundary";
 import { useInvestmentData, useRenewableEnergyData, useWeatherData, useDatasets } from "@/hooks/use-data";
 import type { InvestmentData, RenewableEnergyData } from "@/lib/data-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,12 +40,36 @@ interface KPIData {
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   
-  const { data: investmentData, loading: investmentLoading } = useInvestmentData();
-  const { data: renewableData, loading: renewableLoading } = useRenewableEnergyData();
-  const { data: weatherData, loading: weatherLoading } = useWeatherData();
-  const { datasets, loading: datasetsLoading } = useDatasets();
+  const { 
+    data: investmentData, 
+    loading: investmentLoading, 
+    error: investmentError,
+    refetch: refetchInvestment 
+  } = useInvestmentData();
+  
+  const { 
+    data: renewableData, 
+    loading: renewableLoading, 
+    error: renewableError,
+    refetch: refetchRenewable 
+  } = useRenewableEnergyData();
+  
+  const { 
+    data: weatherData, 
+    loading: weatherLoading, 
+    error: weatherError,
+    refetch: refetchWeather 
+  } = useWeatherData();
+  
+  const { 
+    datasets, 
+    loading: datasetsLoading, 
+    error: datasetsError,
+    refetch: refetchDatasets 
+  } = useDatasets();
 
   const loading = investmentLoading || renewableLoading || weatherLoading || datasetsLoading;
+  const hasErrors = investmentError || renewableError || weatherError || datasetsError;
 
   // 실제 데이터를 기반으로 KPI 계산
   const calculateKPIs = (): KPIData => {
@@ -74,12 +104,60 @@ const Index = () => {
   const renderDashboard = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">대시보드 데이터를 불러오는 중...</span>
-      </div>
-    );
-  };    }
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => (
+              <CardLoadingSkeleton key={i} />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <CardLoadingSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 에러 처리
+    if (hasErrors) {
+      return (
+        <div className="space-y-4">
+          {investmentError && (
+            <ApiError 
+              error={investmentError} 
+              onRetry={refetchInvestment}
+              title="투자 데이터 로딩 실패"
+              description="투자 유치 현황 데이터를 불러올 수 없습니다."
+            />
+          )}
+          {renewableError && (
+            <ApiError 
+              error={renewableError} 
+              onRetry={refetchRenewable}
+              title="재생에너지 데이터 로딩 실패"
+              description="재생에너지 사업 정보를 불러올 수 없습니다."
+            />
+          )}
+          {weatherError && (
+            <ApiError 
+              error={weatherError} 
+              onRetry={refetchWeather}
+              title="기상 데이터 로딩 실패"
+              description="기상정보를 불러올 수 없습니다."
+            />
+          )}
+          {datasetsError && (
+            <ApiError 
+              error={datasetsError} 
+              onRetry={refetchDatasets}
+              title="데이터셋 정보 로딩 실패"
+              description="메타데이터를 불러올 수 없습니다."
+            />
+          )}
+        </div>
+      );
+    }
 
     return (
     <div className="space-y-6">
@@ -219,7 +297,8 @@ const Index = () => {
         </Card>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderAlerts = () => (
     <div className="space-y-4">
@@ -270,6 +349,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <NetworkStatus />
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
       
       <main className="container mx-auto p-4 md:p-6 space-y-6">
@@ -290,6 +370,19 @@ const Index = () => {
               {activeTab === "investment" && "기업별 투자 진행 현황 및 업종별 분석"}
               {activeTab === "alerts" && "실시간 알림 및 이상 감지"}
             </p>
+            {/* 데이터 품질 인디케이터 */}
+            {activeTab === "dashboard" && investmentData.length > 0 && (
+              <div className="mt-2">
+                <DataQualityIndicator
+                  totalRecords={investmentData.length + renewableData.length}
+                  validRecords={investmentData.filter(item => item.company && item.investment > 0).length + 
+                               renewableData.filter(item => item.capacity > 0).length}
+                  qualityScore={Math.round(((investmentData.filter(item => item.company && item.investment > 0).length + 
+                                           renewableData.filter(item => item.capacity > 0).length) / 
+                                          (investmentData.length + renewableData.length)) * 100)}
+                />
+              </div>
+            )}
           </div>
           <Badge variant="outline" className="hidden md:block">
             마지막 업데이트: {new Date().toLocaleTimeString('ko-KR')}
