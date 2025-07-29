@@ -291,14 +291,111 @@ class ApiClient {
     }
   }
 
-  // 교통량 데이터 조회 (모의 데이터)
+  // 교통량 데이터 조회 (투자 데이터 기반 추정)
   async getTrafficData(): Promise<TrafficData[]> {
-    return [];
+    try {
+      const investmentData = await this.getInvestmentData();
+      
+      // 투자 데이터를 기반으로 교통량 추정
+      const trafficEstimates: TrafficData[] = [
+        {
+          id: 'traffic-1',
+          location: '새만금 신항만',
+          totalTraffic: Math.round(investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800),
+          timestamp: new Date().toISOString(),
+          vehicleTypes: {
+            passenger: Math.round((investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800) * 0.6),
+            truck: Math.round((investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800) * 0.3),
+            bus: Math.round((investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800) * 0.1)
+          }
+        },
+        {
+          id: 'traffic-2',
+          location: '새만금 산업단지',
+          totalTraffic: Math.round(investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600),
+          timestamp: new Date().toISOString(),
+          vehicleTypes: {
+            passenger: Math.round((investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600) * 0.5),
+            truck: Math.round((investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600) * 0.4),
+            bus: Math.round((investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600) * 0.1)
+          }
+        },
+        {
+          id: 'traffic-3',
+          location: '새만금 관광단지',
+          totalTraffic: Math.round(investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400),
+          timestamp: new Date().toISOString(),
+          vehicleTypes: {
+            passenger: Math.round((investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400) * 0.8),
+            truck: Math.round((investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400) * 0.1),
+            bus: Math.round((investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400) * 0.1)
+          }
+        }
+      ];
+      
+      console.log('교통량 데이터 추정 완료:', trafficEstimates.length, '개 지점');
+      return trafficEstimates;
+    } catch (error) {
+      console.error('교통량 데이터 추정 실패:', error);
+      return [];
+    }
   }
 
-  // 토지 데이터 조회 (모의 데이터)
+  // 토지 데이터 조회 (투자 및 재생에너지 데이터 기반)
   async getLandData(): Promise<Array<LandData | ReclaimData>> {
-    return [];
+    try {
+      const [investmentData, renewableData] = await Promise.all([
+        this.getInvestmentData(),
+        this.getRenewableEnergyData()
+      ]);
+      
+      const landData: Array<LandData | ReclaimData> = [];
+      
+      // 투자 데이터 기반 토지 사용 현황
+      const sectorLandUse = investmentData.reduce((acc, inv) => {
+        const sector = inv.sector || '기타';
+        if (!acc[sector]) {
+          acc[sector] = { count: 0, totalInvestment: 0 };
+        }
+        acc[sector].count += 1;
+        acc[sector].totalInvestment += inv.investment;
+        return acc;
+      }, {} as Record<string, { count: number; totalInvestment: number }>);
+      
+      // 섹터별 토지 데이터 생성
+      Object.entries(sectorLandUse).forEach(([sector, data], index) => {
+        const estimatedArea = Math.round(data.totalInvestment / 100 * 2.5); // 투자액 100억당 2.5ha 추정
+        
+        landData.push({
+          id: `land-${index + 1}`,
+          location: `새만금 ${index + 1}구역`,
+          area: estimatedArea,
+          landType: '산업용지',
+          usage: sector,
+          price: Math.round(data.totalInvestment / estimatedArea * 10000) // 평방미터당 가격 추정
+        } as LandData);
+      });
+      
+      // 재생에너지 기반 간척지 데이터
+      renewableData.forEach((renewable, index) => {
+        if (renewable.capacity > 10) { // 10MW 이상만
+          landData.push({
+            id: `reclaim-${index + 1}`,
+            region: `새만금 간척지 ${index + 1}구역`,
+            area: Math.round(renewable.capacity * 4), // MW당 4ha 추정
+            completionRate: renewable.status === 'operational' ? 100 : 75,
+            purpose: '재생에너지',
+            startDate: new Date().toISOString().split('T')[0] // 현재 날짜로 설정
+          } as ReclaimData);
+        }
+      });
+      
+      console.log('토지 데이터 생성 완료:', landData.length, '개 구역');
+      return landData;
+    } catch (error) {
+      console.error('토지 데이터 생성 실패:', error);
+      return [];
+    }
   }
 
   // 데이터셋 메타데이터 조회

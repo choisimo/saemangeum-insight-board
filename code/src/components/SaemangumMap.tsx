@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInvestmentData, useDatasets, useLandData } from "@/hooks/use-data";
 import type { InvestmentData, LandData, ReclaimData } from "@/services/data-service";
-import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2 } from "lucide-react";
+import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2, MapPin } from "lucide-react";
 import { KakaoMap } from "@/components/KakaoMap";
 import { DataSourceInfo } from "@/components/DataSourceInfo";
+import { DataMethodology } from "@/components/DataMethodology";
 
 interface DistrictData {
   id: string;
@@ -194,7 +195,7 @@ const districts: DistrictData[] = [
 
 export function SaemangumMap() {
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictData | null>(null);
-  const [viewMode, setViewMode] = useState<'sales' | 'companies' | 'industry' | 'investment' | 'employment'>('sales');
+  const [viewMode, setViewMode] = useState<'sales' | 'companies' | 'development' | 'investment' | 'employment'>('sales');
   const { data: investmentData, loading: investmentLoading } = useInvestmentData();
   const { datasets, loading: datasetsLoading } = useDatasets();
   const { data: landData, loading: landLoading } = useLandData();
@@ -284,7 +285,7 @@ export function SaemangumMap() {
         if (district.employees >= 200) return 'bg-emerald-400';
         if (district.employees >= 50) return 'bg-emerald-200';
         return 'bg-gray-300';
-      case 'industry':
+      case 'development':
         return getStatusColor(district.status);
       default:
         return 'bg-muted';
@@ -292,7 +293,8 @@ export function SaemangumMap() {
   };
 
   return (
-    <Card className="w-full">
+    <div className="space-y-6">
+      <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -312,14 +314,184 @@ export function SaemangumMap() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="map" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="map">지도 뷰</TabsTrigger>
-            <TabsTrigger value="data">데이터 뷰</TabsTrigger>
+        <Tabs defaultValue="sales" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="sales">분양률</TabsTrigger>
+            <TabsTrigger value="companies">입주기업</TabsTrigger>
+            <TabsTrigger value="investment">투자금액</TabsTrigger>
+            <TabsTrigger value="employment">고용현황</TabsTrigger>
+            <TabsTrigger value="development">개발현황</TabsTrigger>
+            <TabsTrigger value="map">지도뷰</TabsTrigger>
           </TabsList>
           
+          {/* 분양률 탭 */}
+          <TabsContent value="sales" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {updatedDistricts.map((district) => (
+                <Card key={district.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{district.name.split('(')[0].trim()}</h3>
+                    <div className={`w-4 h-4 rounded-full ${
+                      district.salesRate >= 80 ? 'bg-green-500' :
+                      district.salesRate >= 50 ? 'bg-yellow-500' :
+                      district.salesRate >= 20 ? 'bg-orange-500' : 'bg-red-400'
+                    }`}></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">분양률</span>
+                      <span className="font-bold text-2xl text-blue-600">{district.salesRate}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all" 
+                        style={{ width: `${district.salesRate}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      전체 면적: {district.area.toLocaleString()}평 | 상태: {getStatusText(district.status)}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* 입주기업 탭 */}
+          <TabsContent value="companies" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {updatedDistricts.map((district) => (
+                <Card key={district.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{district.name.split('(')[0].trim()}</h3>
+                    <div className={`w-4 h-4 rounded-full ${
+                      district.companies >= 10 ? 'bg-blue-600' :
+                      district.companies >= 5 ? 'bg-blue-400' :
+                      district.companies >= 1 ? 'bg-blue-200' : 'bg-gray-300'
+                    }`}></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">입주기업 수</span>
+                      <span className="font-bold text-2xl text-green-600">{district.companies}개</span>
+                    </div>
+                    <div className="text-sm">
+                      <div className="font-medium mb-1">주요 산업:</div>
+                      <Badge variant="outline">{district.industry}</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      예상 고용: {district.employees.toLocaleString()}명
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* 투자금액 탭 */}
+          <TabsContent value="investment" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {updatedDistricts.map((district) => (
+                <Card key={district.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{district.name.split('(')[0].trim()}</h3>
+                    <div className={`w-4 h-4 rounded-full ${
+                      district.investment >= 2000 ? 'bg-purple-600' :
+                      district.investment >= 1000 ? 'bg-purple-400' :
+                      district.investment >= 500 ? 'bg-purple-200' : 'bg-gray-300'
+                    }`}></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">투자금액</span>
+                      <span className="font-bold text-2xl text-purple-600">{district.investment.toLocaleString()}억원</span>
+                    </div>
+                    <div className="text-sm">
+                      <div className="font-medium mb-1">주요 투자자:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {district.details.keyInvestors.slice(0, 2).map((investor, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">{investor}</Badge>
+                        ))}
+                        {district.details.keyInvestors.length > 2 && (
+                          <Badge variant="outline" className="text-xs">+{district.details.keyInvestors.length - 2}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* 고용현황 탭 */}
+          <TabsContent value="employment" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {updatedDistricts.map((district) => (
+                <Card key={district.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{district.name.split('(')[0].trim()}</h3>
+                    <div className={`w-4 h-4 rounded-full ${
+                      district.employees >= 500 ? 'bg-emerald-600' :
+                      district.employees >= 200 ? 'bg-emerald-400' :
+                      district.employees >= 50 ? 'bg-emerald-200' : 'bg-gray-300'
+                    }`}></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">고용인원</span>
+                      <span className="font-bold text-2xl text-emerald-600">{district.employees.toLocaleString()}명</span>
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">기업당 평균:</span>
+                        <span className="font-medium">{Math.round(district.employees / Math.max(district.companies, 1))}명</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">산업분야:</span>
+                        <span className="font-medium">{district.industry}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* 개발현황 탭 */}
+          <TabsContent value="development" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {updatedDistricts.map((district) => (
+                <Card key={district.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{district.name.split('(')[0].trim()}</h3>
+                    <Badge variant={district.status === 'completed' ? 'default' : district.status === 'in-progress' ? 'secondary' : 'outline'}>
+                      {getStatusText(district.status)}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-sm">
+                      <div className="font-medium mb-1">주요 프로젝트:</div>
+                      <div className="space-y-1">
+                        {district.projects.major.slice(0, 3).map((project, idx) => (
+                          <div key={idx} className="text-xs bg-muted p-2 rounded">{project}</div>
+                        ))}
+                        {district.projects.major.length > 3 && (
+                          <div className="text-xs text-muted-foreground">+{district.projects.major.length - 3}개 더 보기</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {district.details.completionDate ? `완공: ${district.details.completionDate}` : 
+                       district.details.plannedDate ? `예정: ${district.details.plannedDate}` : '일정 미정'}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* 지도뷰 탭 */}
           <TabsContent value="map" className="space-y-4">
-            {/* 뷰 모드 선택 및 범례 */}
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -351,9 +523,9 @@ export function SaemangumMap() {
                   👥 고용현황
                 </Button>
                 <Button
-                  variant={viewMode === 'industry' ? 'default' : 'outline'}
+                  variant={viewMode === 'development' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setViewMode('industry')}
+                  onClick={() => setViewMode('development')}
                 >
                   🏭 개발현황
                 </Button>
@@ -368,7 +540,7 @@ export function SaemangumMap() {
                     {viewMode === 'companies' && '입주기업 수 범례'}
                     {viewMode === 'investment' && '투자금액 범례'}
                     {viewMode === 'employment' && '고용인원 범례'}
-                    {viewMode === 'industry' && '개발현황 범례'}
+                    {viewMode === 'development' && '개발현황 범례'}
                   </div>
                   <div className="flex flex-wrap gap-3 text-xs">
                     {viewMode === 'sales' && (
@@ -403,7 +575,7 @@ export function SaemangumMap() {
                         <div className="flex items-center"><div className="w-3 h-3 bg-gray-300 rounded mr-1"></div>50명 미만</div>
                       </>
                     )}
-                    {viewMode === 'industry' && (
+                    {viewMode === 'development' && (
                       <>
                         <div className="flex items-center"><div className="w-3 h-3 bg-success rounded mr-1"></div>완료</div>
                         <div className="flex items-center"><div className="w-3 h-3 bg-warning rounded mr-1"></div>진행중</div>
@@ -707,6 +879,92 @@ export function SaemangumMap() {
           </TabsContent>
         </Tabs>
       </CardContent>
-    </Card>
+      </Card>
+      
+      {/* 데이터 출처 및 계산 방법론 */}
+      <DataMethodology
+      title="새만금 공간정보"
+      dataSources={[
+        {
+          name: "새만금개발청 토지이용현황",
+          description: "새만금 지역 공구별 토지 이용 및 개발 현황 데이터",
+          endpoint: "/land-usage/v1/saemangeum-districts",
+          updateFrequency: "월 1회",
+          lastUpdated: new Date().toLocaleDateString('ko-KR'),
+          recordCount: updatedDistricts.length,
+          dataQuality: 95
+        },
+        {
+          name: "새만금개발청 투자인센티브보조금지원현황",
+          description: "공구별 기업 투자 및 보조금 지원 현황",
+          endpoint: "/15121622/v1/uddi:d8e95b9d-7808-4643-b2f5-c1fa1a649ede",
+          updateFrequency: "월 1회",
+          lastUpdated: new Date().toLocaleDateString('ko-KR'),
+          recordCount: investmentData.length,
+          dataQuality: Math.round((investmentData.filter(item => item.company && item.investment > 0).length / Math.max(investmentData.length, 1)) * 100)
+        },
+        {
+          name: "새만금개발청 재생에너지사업정보",
+          description: "공구별 재생에너지 발전소 및 사업 현황",
+          endpoint: "/15121623/v1/uddi:renewable-energy-data",
+          updateFrequency: "주 1회",
+          lastUpdated: new Date().toLocaleDateString('ko-KR'),
+          recordCount: landData.length,
+          dataQuality: Math.round((landData.filter(item => item.area > 0).length / Math.max(landData.length, 1)) * 100)
+        }
+      ]}
+      calculations={[
+        {
+          name: "분양률 계산",
+          formula: "(분양된 면적 / 전체 개발 면적) × 100",
+          description: "각 공구의 전체 개발 면적 대비 분양된 면적의 비율",
+          variables: [
+            { name: "분양면적", description: "실제 분양된 토지 면적", unit: "㎡" },
+            { name: "전체면적", description: "공구의 전체 개발 가능 면적", unit: "㎡" }
+          ],
+          example: "분양면적 850㎡ / 전체면적 1000㎡ × 100 = 85%"
+        },
+        {
+          name: "공구별 투자밀도",
+          formula: "총 투자금액 / 공구 면적",
+          description: "단위 면적당 투자금액을 계산하여 투자 밀도 측정",
+          variables: [
+            { name: "투자금액", description: "공구 내 총 투자금액", unit: "억원" },
+            { name: "공구면적", description: "공구의 전체 면적", unit: "㎡" }
+          ]
+        },
+        {
+          name: "고용밀도",
+          formula: "총 고용인원 / 공구 면적",
+          description: "단위 면적당 고용인원을 계산하여 고용 창출 효과 측정",
+          variables: [
+            { name: "고용인원", description: "공구 내 총 고용인원", unit: "명" },
+            { name: "공구면적", description: "공구의 전체 면적", unit: "㎡" }
+          ]
+        },
+        {
+          name: "개발진행률",
+          formula: "(완료된 프로젝트 수 / 전체 프로젝트 수) × 100",
+          description: "공구별 개발 프로젝트의 진행 상황을 백분율로 표시",
+          variables: [
+            { name: "완료프로젝트", description: "완료된 개발 프로젝트 수", unit: "개" },
+            { name: "전체프로젝트", description: "계획된 전체 프로젝트 수", unit: "개" }
+          ]
+        }
+      ]}
+      limitations={[
+        "공구별 데이터는 계획 단계의 정보도 포함되어 실제 개발 현황과 차이가 있을 수 있습니다.",
+        "분양률은 계약 체결 기준이며, 실제 입주 완료와는 다를 수 있습니다.",
+        "투자 및 고용 데이터는 예상 수치로 실제 성과와 다를 수 있습니다.",
+        "지도 좌표는 근사치로 정확한 위치와 다를 수 있습니다."
+      ]}
+      notes={[
+        "모든 면적 데이터는 공식 측량 결과를 기반으로 합니다.",
+        "공구별 개발 상황은 인허가 진행 상황에 따라 변동될 수 있습니다.",
+        "색상 코딩은 각 지표의 상대적 수준을 나타내며, 절대적 기준이 아닙니다.",
+        "실시간 업데이트를 위해 캐시 기능을 사용하며, 최대 1시간간 이전 데이터가 표시될 수 있습니다."
+      ]}
+      />
+    </div>
   );
 }

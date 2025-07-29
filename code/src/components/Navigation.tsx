@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SettingsDialog } from "./SettingsDialog";
+import { useAlertStatus } from "@/hooks/use-alerts";
 
 interface NavigationProps {
   activeTab: string;
@@ -32,6 +33,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { hasUnreadAlerts, hasCriticalAlerts, totalCount } = useAlertStatus();
 
   return (
     <>
@@ -65,9 +67,12 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
                 >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
-                  {item.id === "alerts" && (
-                    <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
-                      3
+                  {item.id === "alerts" && hasUnreadAlerts && (
+                    <Badge 
+                      variant={hasCriticalAlerts ? "destructive" : "secondary"} 
+                      className="ml-1 px-1.5 py-0.5 text-xs"
+                    >
+                      {totalCount}
                     </Badge>
                   )}
                 </Button>
@@ -160,9 +165,12 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
                 >
                   <Icon className="h-4 w-4 mr-2" />
                   <span>{item.label}</span>
-                  {item.id === "alerts" && (
-                    <Badge variant="destructive" className="ml-auto px-1.5 py-0.5 text-xs">
-                      3
+                  {item.id === "alerts" && hasUnreadAlerts && (
+                    <Badge 
+                      variant={hasCriticalAlerts ? "destructive" : "secondary"} 
+                      className="ml-auto px-1.5 py-0.5 text-xs"
+                    >
+                      {totalCount}
                     </Badge>
                   )}
                 </Button>

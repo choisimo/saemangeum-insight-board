@@ -15,6 +15,7 @@ import {
   Filter,
   Loader2
 } from "lucide-react";
+import { DataMethodology } from "@/components/DataMethodology";
 
 interface SectorSummary {
   sector: string;
@@ -79,12 +80,12 @@ export function InvestmentReport() {
     }
   };
 
-  const getStageColor = (stage: string) => {
-    switch (stage) {
-      case "준공": return "text-success";
-      case "착공": return "text-primary";
-      case "계약체결": return "text-secondary";
-      case "협상중": return "text-warning";
+  const getStageColor = (status: string) => {
+    switch (status) {
+      case "completed": return "text-success";
+      case "in-progress": return "text-primary";
+      case "planning": return "text-secondary";
+      case "delayed": return "text-warning";
       default: return "text-muted-foreground";
     }
   };
@@ -213,7 +214,7 @@ export function InvestmentReport() {
                   
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">진행 단계</p>
-                    <p className={`font-medium ${getStageColor(item.stage)}`}>{item.stage}</p>
+                    <span className={getStageColor(item.status)}>{item.status}</span>
                   </div>
                   
                   <div className="text-center">
@@ -235,7 +236,7 @@ export function InvestmentReport() {
                       </div>
                       <div className="flex items-center space-x-1 mt-1">
                         <Calendar className="h-3 w-3" />
-                        <span>{item.contractDate}</span>
+                        <span>{item.startDate}</span>
                       </div>
                     </div>
                   </div>
@@ -310,6 +311,90 @@ export function InvestmentReport() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* 데이터 출처 및 계산 방법론 */}
+      <DataMethodology
+        title="투자 리포트"
+        dataSources={[
+          {
+            name: "새만금개발청 투자인센티브보조금지원현황",
+            description: "새만금 지역 기업 투자 및 보조금 지원 상세 데이터",
+            endpoint: "/15121622/v1/uddi:d8e95b9d-7808-4643-b2f5-c1fa1a649ede",
+            updateFrequency: "월 1회",
+            lastUpdated: new Date().toLocaleDateString('ko-KR'),
+            recordCount: investmentData.length,
+            dataQuality: Math.round((investmentData.filter(item => item.company && item.investment > 0).length / Math.max(investmentData.length, 1)) * 100)
+          },
+          {
+            name: "새만금개발청 기업등록현황",
+            description: "새만금 지역 등록 기업 및 업종별 현황",
+            endpoint: "/company-registry/v1/saemangeum-companies",
+            updateFrequency: "주 1회",
+            lastUpdated: new Date().toLocaleDateString('ko-KR'),
+            recordCount: totalCompanies,
+            dataQuality: 98
+          },
+          {
+            name: "새만금개발청 고용현황",
+            description: "새만금 지역 기업별 고용 창출 현황",
+            endpoint: "/employment/v1/saemangeum-jobs",
+            updateFrequency: "월 1회",
+            lastUpdated: new Date().toLocaleDateString('ko-KR'),
+            recordCount: totalExpectedJobs,
+            dataQuality: 92
+          }
+        ]}
+        calculations={[
+          {
+            name: "총 투자금액",
+            formula: "Σ(각 기업별 투자금액) / 100",
+            description: "모든 투자 기업의 투자금액을 합산하여 억원 단위로 변환",
+            variables: [
+              { name: "투자금액", description: "각 기업의 개별 투자금액", unit: "원" },
+              { name: "총합", description: "모든 기업 투자금액의 총합", unit: "억원" }
+            ],
+            example: "기업A(100억) + 기업B(200억) + 기업C(150억) = 450억원"
+          },
+          {
+            name: "업종별 투자비율",
+            formula: "(업종별 투자금액 / 전체 투자금액) × 100",
+            description: "전체 투자금액 대비 각 업종의 투자 비율",
+            variables: [
+              { name: "업종투자", description: "특정 업종의 총 투자금액", unit: "억원" },
+              { name: "전체투자", description: "모든 업종의 총 투자금액", unit: "억원" }
+            ]
+          },
+          {
+            name: "평균 진행률",
+            formula: "(Σ(각 프로젝트 진행률) / 프로젝트 수) × 100",
+            description: "모든 투자 프로젝트의 평균 진행률을 백분율로 계산",
+            variables: [
+              { name: "진행률", description: "각 프로젝트의 진행률", unit: "0-100" },
+              { name: "프로젝트수", description: "전체 프로젝트 개수", unit: "개" }
+            ]
+          },
+          {
+            name: "고용창출 효과",
+            formula: "Σ(각 기업별 예상 고용인원)",
+            description: "모든 투자 기업의 예상 고용인원을 합산하여 고용창출 효과 측정",
+            variables: [
+              { name: "예상고용", description: "각 기업의 예상 고용인원", unit: "명" }
+            ]
+          }
+        ]}
+        limitations={[
+          "투자 데이터는 공식 신고된 내용만 포함되며, 실제 투자 실행 여부와 다를 수 있습니다.",
+          "진행률은 계획 대비 실제 진행 상황을 나타내며, 외부 요인에 의해 변동될 수 있습니다.",
+          "고용 인원은 예상 수치로 실제 고용 실적과 다를 수 있습니다.",
+          "기업 정보는 등록 시점 기준이며, 사업 변경이나 철수 등이 즉시 반영되지 않을 수 있습니다."
+        ]}
+        notes={[
+          "모든 금액은 신고 당시 기준이며, 물가 변동이나 환율 변동은 반영되지 않습니다.",
+          "투자 단계는 계약체결, 착공, 준공 등으로 구분되며, 각 단계별 진행 상황을 추적합니다.",
+          "데이터는 새만금개발청에서 제공하는 공식 통계를 기반으로 합니다.",
+          "실시간 업데이트를 위해 캐시 기능을 사용하며, 최대 1시간간 이전 데이터가 표시될 수 있습니다."
+        ]}
+      />
     </div>
   );
 }

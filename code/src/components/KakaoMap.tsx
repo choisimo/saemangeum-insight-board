@@ -189,8 +189,9 @@ export function KakaoMap({ data = [], height = "400px" }: KakaoMapProps) {
           
           const infowindow = new window.kakao.maps.InfoWindow({
             content: `
-              <div style="padding:15px; min-width:250px; max-width:350px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px;">
+              <div style="padding:15px; min-width:250px; max-width:350px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
+                <button onclick="this.parentElement.parentElement.parentElement.style.display='none'" style="position: absolute; top: 8px; right: 8px; background: #f3f4f6; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #6b7280; hover:background: #e5e7eb;" title="닫기">×</button>
+                <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; padding-right: 20px;">
                   <h4 style="margin:0; font-size:16px; font-weight:bold; color:#1f2937; line-height:1.4;">${item.name}</h4>
                   <div style="margin-top: 4px;">
                     <span style="display: inline-block; background: ${item.type === 'investment' ? '#3b82f6' : item.type === 'renewable' ? '#10b981' : '#8b5cf6'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
@@ -301,27 +302,37 @@ export function KakaoMap({ data = [], height = "400px" }: KakaoMapProps) {
       // 3. API 키 유효성 검증
       const validation = validateApiKey(apiKey);
       if (!validation.isValid) {
+        console.log('API 키 유효성 검증 실패:', validation.message);
         setHasApiKey(false);
         setError(validation.message || '유효하지 않은 API 키입니다.');
-        setIsLoading(false);
         return;
       }
       
       console.log('API 키 유효성 검증 통과, 스크립트 로드 시작...');
       
       // 4. 카카오맵 스크립트 로드
-      await loadKakaoMapScript(apiKey);
-      
-      // 5. 지도 초기화
-      setTimeout(() => {
-        if (window.kakao && window.kakao.maps) {
-          initializeMap();
-          setHasApiKey(true);
-          console.log('카카오맵 로드 완료!');
-        } else {
-          throw new Error('카카오맵 라이브러리 로드 실패');
-        }
-      }, 100);
+      try {
+        await loadKakaoMapScript(apiKey);
+        console.log('스크립트 로드 성공');
+        
+        // 5. 지도 초기화
+        setTimeout(() => {
+          if (window.kakao && window.kakao.maps) {
+            initializeMap();
+            setHasApiKey(true);
+            console.log('카카오맵 로드 완료!');
+          } else {
+            console.error('카카오맵 라이브러리 객체가 없음');
+            setError('카카오맵 라이브러리 로드 실패');
+            setHasApiKey(false);
+          }
+        }, 100);
+        
+      } catch (scriptError) {
+        console.error('스크립트 로드 실패:', scriptError);
+        setError(scriptError instanceof Error ? scriptError.message : '카카오맵 스크립트 로드에 실패했습니다.');
+        setHasApiKey(false);
+      }
       
     } catch (error) {
       console.error('카카오맵 로드 오류:', error);

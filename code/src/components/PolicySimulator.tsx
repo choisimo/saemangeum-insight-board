@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, BarChart3, TrendingUp, RefreshCw } from "lucide-react";
+import { useInvestmentData, useRenewableEnergyData } from "@/hooks/use-data";
 
 interface SimulationResult {
   investmentAttraction: number;
@@ -17,13 +18,26 @@ export function PolicySimulator() {
   const [corporateTaxReduction, setCorporateTaxReduction] = useState([5]);
   const [rentalDiscount, setRentalDiscount] = useState([20]);
   const [re100Incentive, setRe100Incentive] = useState([10]);
+  
+  const { data: investmentData = [] } = useInvestmentData();
+  const { data: renewableData = [] } = useRenewableEnergyData();
 
   // 정책 시뮬레이션 계산 로직
   const calculateEffects = (): SimulationResult => {
-    const baseInvestment = 1000; // 기준 투자액 (억원)
-    const baseEmployment = 500; // 기준 고용 (명)
-    const baseGDP = 200; // 기준 GDP 기여 (억원)
-    const baseCarbon = 100; // 기준 탄소 절감 (톤)
+    // 실제 데이터 기반 기준값 계산
+    const baseInvestment = investmentData.length > 0 
+      ? Math.round(investmentData.reduce((sum, item) => sum + item.investment, 0) / 100)
+      : 1000; // 기준 투자액 (억원)
+    
+    const baseEmployment = investmentData.length > 0
+      ? investmentData.reduce((sum, item) => sum + item.expectedJobs, 0)
+      : 500; // 기준 고용 (명)
+    
+    const baseGDP = Math.round(baseInvestment * 0.2); // GDP 기여도는 투자액의 20%로 추정
+    
+    const baseCarbon = renewableData.length > 0
+      ? Math.round(renewableData.reduce((sum, item) => sum + item.capacity, 0) * 2.5) // MW당 2.5톤 CO2 절감 추정
+      : 100; // 기준 탄소 절감 (톤)
 
     const taxMultiplier = 1 + (corporateTaxReduction[0] * 0.08); // 세금 감면 효과
     const rentalMultiplier = 1 + (rentalDiscount[0] * 0.05); // 임대료 할인 효과
@@ -38,7 +52,22 @@ export function PolicySimulator() {
   };
 
   const results = calculateEffects();
-  const baseline = { investmentAttraction: 1000, employmentCreation: 500, gdpContribution: 200, carbonReduction: 100 };
+  
+  // 실제 데이터 기반 기준선 계산
+  const baseline = {
+    investmentAttraction: investmentData.length > 0 
+      ? Math.round(investmentData.reduce((sum, item) => sum + item.investment, 0) / 100)
+      : 1000,
+    employmentCreation: investmentData.length > 0
+      ? investmentData.reduce((sum, item) => sum + item.expectedJobs, 0)
+      : 500,
+    gdpContribution: investmentData.length > 0
+      ? Math.round(investmentData.reduce((sum, item) => sum + item.investment, 0) / 100 * 0.2)
+      : 200,
+    carbonReduction: renewableData.length > 0
+      ? Math.round(renewableData.reduce((sum, item) => sum + item.capacity, 0) * 2.5)
+      : 100
+  };
 
   const resetPolicies = () => {
     setCorporateTaxReduction([5]);
@@ -206,11 +235,11 @@ export function PolicySimulator() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">최대 인센티브:</span>
-                  <span className="font-medium text-success">투자유치 1,850억원 (예상)</span>
+                  <span className="font-medium text-success">투자유치 {Math.round(baseline.investmentAttraction * 1.85).toLocaleString()}억원 (예상)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">현재 정책 유지:</span>
-                  <span className="font-medium text-muted-foreground">투자유치 1,000억원</span>
+                  <span className="font-medium text-muted-foreground">투자유치 {baseline.investmentAttraction.toLocaleString()}억원</span>
                 </div>
               </div>
             </Card>
