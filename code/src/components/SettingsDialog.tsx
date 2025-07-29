@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { Switch } from './ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -18,7 +17,6 @@ import {
   Shield, 
   Save, 
   RotateCcw,
-  CheckCircle,
   AlertTriangle,
   Info,
   ExternalLink
@@ -28,8 +26,31 @@ import { useToast } from './ui/use-toast';
 interface SettingsConfig {
   // API 설정
   kakaoMapApiKey: string;
+  kakaoMapAppKey: string;
   dataApiBaseUrl: string;
+  apiServiceKey: string;
+  apiTimeout: number;
+  apiRetryCount: number;
+  cacheDuration: number;
   refreshInterval: number;
+  
+  // 환경 설정
+  appEnv: 'development' | 'production' | 'staging';
+  debugMode: boolean;
+  dataQualityThreshold: number;
+  
+  // 지도 좌표 설정
+  defaultLat: number;
+  defaultLng: number;
+  
+  // 애플리케이션 메타데이터
+  appName: string;
+  appVersion: string;
+  appDescription: string;
+  
+  // 외부 서비스
+  analyticsId: string;
+  sentryDsn: string;
   
   // 알림 설정
   enableNotifications: boolean;
@@ -52,8 +73,28 @@ interface SettingsConfig {
 
 const defaultSettings: SettingsConfig = {
   kakaoMapApiKey: '',
-  dataApiBaseUrl: 'https://api.odcloud.kr/api',
-  refreshInterval: 300000, // 5분
+  kakaoMapAppKey: '',
+  dataApiBaseUrl: 'https://api.data.go.kr/openapi/tn_pubr_public_saemangeum_api',
+  apiServiceKey: '',
+  apiTimeout: 30000,
+  apiRetryCount: 3,
+  cacheDuration: 300000,
+  refreshInterval: 300000,
+  
+  appEnv: 'development',
+  debugMode: true,
+  dataQualityThreshold: 80,
+  
+  defaultLat: 35.7983,
+  defaultLng: 126.7041,
+  
+  appName: '새만금 인사이트 대시보드',
+  appVersion: '1.0.0',
+  appDescription: '새만금개발청 공공데이터 기반 통합 대시보드',
+  
+  analyticsId: '',
+  sentryDsn: '',
+  
   enableNotifications: true,
   alertThresholds: {
     investment: 1000,
@@ -80,7 +121,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
   const [hasChanges, setHasChanges] = useState(false);
   const { toast } = useToast();
 
-  // 설정 로드
   useEffect(() => {
     loadSettings();
   }, []);
@@ -105,10 +145,8 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
   const saveSettings = async () => {
     setSaving(true);
     try {
-      // localStorage에 저장
       localStorage.setItem('saemangeum-settings', JSON.stringify(settings));
       
-      // 카카오맵 API 키가 변경된 경우 페이지 새로고침 알림
       const currentKey = localStorage.getItem('kakao-api-key');
       if (currentKey !== settings.kakaoMapApiKey) {
         localStorage.setItem('kakao-api-key', settings.kakaoMapApiKey);
@@ -120,7 +158,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
         description: "설정이 성공적으로 저장되었습니다.",
       });
       
-      // API 키가 변경된 경우 새로고침 권장
       if (currentKey !== settings.kakaoMapApiKey && settings.kakaoMapApiKey) {
         toast({
           title: "페이지 새로고침 권장",
@@ -187,7 +224,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
     }
 
     try {
-      // 간단한 API 키 형식 검증
       if (settings.kakaoMapApiKey.length < 10) {
         throw new Error('API 키 형식이 올바르지 않습니다.');
       }
@@ -217,10 +253,14 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
         </DialogHeader>
 
         <Tabs defaultValue="api" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="api" className="flex items-center space-x-2">
               <Key className="h-4 w-4" />
               <span>API 설정</span>
+            </TabsTrigger>
+            <TabsTrigger value="env" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>환경 설정</span>
             </TabsTrigger>
             <TabsTrigger value="alerts" className="flex items-center space-x-2">
               <Bell className="h-4 w-4" />
@@ -236,7 +276,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
             </TabsTrigger>
           </TabsList>
 
-          {/* API 설정 탭 */}
           <TabsContent value="api" className="space-y-4">
             <Card>
               <CardHeader>
@@ -264,14 +303,17 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
                       테스트
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    카카오 개발자 센터에서 발급받은 JavaScript API 키를 입력하세요.
-                    <Button variant="link" size="sm" className="p-0 h-auto ml-1" asChild>
-                      <a href="https://developers.kakao.com/" target="_blank" rel="noopener noreferrer">
-                        발급받기 <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    </Button>
-                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="api-service-key">공공데이터 API 서비스 키</Label>
+                  <Input
+                    id="api-service-key"
+                    type="password"
+                    placeholder="data.go.kr에서 발급받은 서비스 키를 입력하세요"
+                    value={settings.apiServiceKey}
+                    onChange={(e) => updateSetting('apiServiceKey', e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -281,30 +323,52 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
                     value={settings.dataApiBaseUrl}
                     onChange={(e) => updateSetting('dataApiBaseUrl', e.target.value)}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    공공데이터포털 API의 기본 URL입니다.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="refresh-interval">데이터 새로고침 간격 (초)</Label>
-                  <Input
-                    id="refresh-interval"
-                    type="number"
-                    min="60"
-                    max="3600"
-                    value={settings.refreshInterval / 1000}
-                    onChange={(e) => updateSetting('refreshInterval', parseInt(e.target.value) * 1000)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    데이터를 자동으로 새로고침하는 간격입니다. (60초 ~ 3600초)
-                  </p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* 알림 설정 탭 */}
+          <TabsContent value="env" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Settings className="h-4 w-4" />
+                  <span>환경 및 성능 설정</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>환경 모드</Label>
+                  <div className="flex space-x-2">
+                    {(['development', 'production', 'staging'] as const).map((env) => (
+                      <Button
+                        key={env}
+                        variant={settings.appEnv === env ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => updateSetting('appEnv', env)}
+                      >
+                        {env === 'development' ? '개발' : env === 'production' ? '운영' : '스테이징'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>디버그 모드</Label>
+                    <p className="text-sm text-muted-foreground">
+                      개발 도구 및 디버그 정보를 표시합니다.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.debugMode}
+                    onCheckedChange={(checked) => updateSetting('debugMode', checked)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="alerts" className="space-y-4">
             <Card>
               <CardHeader>
@@ -327,49 +391,44 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <Label>알림 임계값 설정</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="investment-threshold">투자 임계값 (억원)</Label>
+                    <Input
+                      id="investment-threshold"
+                      type="number"
+                      min="0"
+                      value={settings.alertThresholds.investment}
+                      onChange={(e) => updateAlertThreshold('investment', parseInt(e.target.value))}
+                    />
+                  </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="investment-threshold">투자 임계값 (억원)</Label>
-                      <Input
-                        id="investment-threshold"
-                        type="number"
-                        min="0"
-                        value={settings.alertThresholds.investment}
-                        onChange={(e) => updateAlertThreshold('investment', parseInt(e.target.value))}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="employment-threshold">고용 임계값 (명)</Label>
-                      <Input
-                        id="employment-threshold"
-                        type="number"
-                        min="0"
-                        value={settings.alertThresholds.employment}
-                        onChange={(e) => updateAlertThreshold('employment', parseInt(e.target.value))}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="complaints-threshold">민원 임계값 (건)</Label>
-                      <Input
-                        id="complaints-threshold"
-                        type="number"
-                        min="0"
-                        value={settings.alertThresholds.complaints}
-                        onChange={(e) => updateAlertThreshold('complaints', parseInt(e.target.value))}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="employment-threshold">고용 임계값 (명)</Label>
+                    <Input
+                      id="employment-threshold"
+                      type="number"
+                      min="0"
+                      value={settings.alertThresholds.employment}
+                      onChange={(e) => updateAlertThreshold('employment', parseInt(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="complaints-threshold">민원 임계값 (건)</Label>
+                    <Input
+                      id="complaints-threshold"
+                      type="number"
+                      min="0"
+                      value={settings.alertThresholds.complaints}
+                      onChange={(e) => updateAlertThreshold('complaints', parseInt(e.target.value))}
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* UI 설정 탭 */}
           <TabsContent value="ui" className="space-y-4">
             <Card>
               <CardHeader>
@@ -427,7 +486,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
             </Card>
           </TabsContent>
 
-          {/* 데이터 설정 탭 */}
           <TabsContent value="data" className="space-y-4">
             <Card>
               <CardHeader>
@@ -460,9 +518,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
                     value={settings.dataRetentionDays}
                     onChange={(e) => updateSetting('dataRetentionDays', parseInt(e.target.value))}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    로컬 캐시 데이터를 보관할 기간입니다.
-                  </p>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -482,7 +537,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
           </TabsContent>
         </Tabs>
 
-        {/* 하단 액션 버튼들 */}
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="flex items-center space-x-2">
             {hasChanges && (
@@ -516,7 +570,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
           </div>
         </div>
 
-        {/* 도움말 알림 */}
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>

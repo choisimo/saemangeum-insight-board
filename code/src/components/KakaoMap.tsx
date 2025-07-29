@@ -189,10 +189,24 @@ export function KakaoMap({ data = [], height = "400px" }: KakaoMapProps) {
           
           const infowindow = new window.kakao.maps.InfoWindow({
             content: `
-              <div style="padding:10px; min-width:200px;">
-                <h4 style="margin:0 0 5px 0; font-size:14px; font-weight:bold;">${item.name}</h4>
-                <p style="margin:0 0 5px 0; font-size:12px; color:#666;">${item.description}</p>
-                ${item.value ? `<p style="margin:0; font-size:12px; color:#0066cc; font-weight:bold;">${item.value}</p>` : ''}
+              <div style="padding:15px; min-width:250px; max-width:350px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px;">
+                  <h4 style="margin:0; font-size:16px; font-weight:bold; color:#1f2937; line-height:1.4;">${item.name}</h4>
+                  <div style="margin-top: 4px;">
+                    <span style="display: inline-block; background: ${item.type === 'investment' ? '#3b82f6' : item.type === 'renewable' ? '#10b981' : '#8b5cf6'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                      ${item.type === 'investment' ? '🏢 투자' : item.type === 'renewable' ? '⚡ 에너지' : '🏗️ 인프라'}
+                    </span>
+                  </div>
+                </div>
+                <p style="margin:0 0 8px 0; font-size:13px; color:#6b7280; line-height:1.5;">${item.description}</p>
+                ${item.value ? `
+                  <div style="background: #f3f4f6; padding: 8px 12px; border-radius: 8px; margin-top: 8px;">
+                    <p style="margin:0; font-size:14px; color:#1f2937; font-weight:600; text-align: center;">${item.value}</p>
+                  </div>
+                ` : ''}
+                <div style="margin-top: 10px; text-align: center;">
+                  <small style="color: #9ca3af; font-size: 11px;">📍 새만금 개발사업</small>
+                </div>
               </div>
             `
           });
