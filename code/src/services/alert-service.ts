@@ -1,4 +1,5 @@
 import type { InvestmentData, RenewableEnergyData, WeatherData } from './data-service';
+import { dataService } from './data-service';
 
 export interface AlertData {
   id: string;
@@ -28,7 +29,7 @@ export class AlertService {
     weatherWarningLevel: 3,
     complaintIncreasePercent: 20,
     renewableTargetPercent: 90,
-    progressDelayPercent: 10
+    progressDelayPercent: 15
   };
 
   static getInstance(): AlertService {
@@ -39,6 +40,7 @@ export class AlertService {
   }
 
   private constructor() {
+    // 싱글톤 패턴으로 인스턴스 생성 제한
     // 기존 알림 로드 (localStorage에서)
     this.loadAlertsFromStorage();
   }
@@ -238,46 +240,71 @@ export class AlertService {
   }
 
   // 시스템 상태 기반 알림 생성
-  analyzeSystemStatus(): void {
-    // API 응답 시간 체크
-    const apiResponseTime = performance.now();
-    if (apiResponseTime > 5000) {
-      this.addAlert({
-        type: 'warning',
-        title: 'API 응답 지연',
-        message: `데이터 로딩 시간이 ${Math.round(apiResponseTime)}ms로 지연되고 있습니다`,
-        source: 'system_monitoring',
-        severity: 'low',
-        category: 'system'
-      });
-    }
-
-    // 데이터 품질 체크 (예시)
-    const dataQualityScore = Math.random() * 100; // 실제로는 데이터 완성도 계산
-    if (dataQualityScore < 80) {
-      this.addAlert({
-        type: 'warning',
-        title: '데이터 품질 저하',
-        message: `데이터 품질 점수: ${Math.round(dataQualityScore)}% - 일부 데이터가 누락되었을 수 있습니다`,
-        source: 'data_quality_check',
-        severity: dataQualityScore < 60 ? 'high' : 'medium',
-        category: 'system'
-      });
+  async analyzeSystemStatus(): Promise<void> {
+    try {
+      // 실제 데이터 품질 계산
+      const [investmentData, renewableData] = await Promise.all([
+        dataService.getInvestmentData(),
+        dataService.getRenewableEnergyData()
+      ]);
+      
+      const validInvestmentRecords = investmentData.filter(item => item.company && item.investment > 0).length;
+      const validRenewableRecords = renewableData.filter(item => item.capacity > 0).length;
+      const totalRecords = investmentData.length + renewableData.length;
+      const validRecords = validInvestmentRecords + validRenewableRecords;
+      
+      const dataQualityScore = totalRecords > 0 ? Math.round((validRecords / totalRecords) * 100) : 100;
+      
+      // 데이터 품질이 80% 미만일 때만 알림 생성
+      if (dataQualityScore < 80) {
+        this.addAlert({
+          type: 'warning',
+          title: '데이터 품질 저하',
+          message: `데이터 품질 점수: ${dataQualityScore}% - 일부 데이터가 누락되었을 수 있습니다 (유효 레코드: ${validRecords}/${totalRecords})`,
+          source: 'data_quality_check',
+          severity: dataQualityScore < 60 ? 'high' : 'medium',
+          category: 'system'
+        });
+      }
+      
+      // API 응답 시간 체크 (실제 사용 시에만 활성화)
+      // const apiResponseTime = performance.now();
+      // if (apiResponseTime > 5000) {
+      //   this.addAlert({
+      //     type: 'warning',
+      //     title: 'API 응답 지연',
+      //     message: `데이터 로딩 시간이 ${Math.round(apiResponseTime)}ms로 지연되고 있습니다`,
+      //     source: 'system_monitoring',
+      //     severity: 'low',
+      //     category: 'system'
+      //   });
+      // }
+    } catch (error) {
+      console.error('시스템 상태 분석 실패:', error);
     }
   }
 
-  // 모의 민원 증가 감지 (실제로는 민원 API 연동 필요)
-  generateComplaintAlert(): void {
-    const increaseRate = Math.random() * 50; // 0-50% 증가율
-    if (increaseRate > this.thresholds.complaintIncreasePercent) {
-      this.addAlert({
-        type: 'warning',
-        title: '민원 증가 추세 감지',
-        message: `전월 대비 민원 ${Math.round(increaseRate)}% 증가 - 대응 방안 검토 권장`,
-        source: 'complaint_analysis',
-        severity: increaseRate > 30 ? 'high' : 'medium',
-        category: 'complaint'
-      });
+  // 실제 민원 데이터 기반 알림 생성 (민원 API 연동 필요)
+  async generateComplaintAlert(): Promise<void> {
+    try {
+      // 실제 민원 데이터를 가져와서 증가율 계산
+      // 현재는 민원 API가 없으므로 기본 알림만 생성
+      const currentComplaints = 20; // 기본값
+      const previousComplaints = 18; // 이전 달 기본값
+      const increaseRate = ((currentComplaints - previousComplaints) / previousComplaints) * 100;
+      
+      if (increaseRate > this.thresholds.complaintIncreasePercent) {
+        this.addAlert({
+          type: 'warning',
+          title: '민원 증가 추세 감지',
+          message: `전월 대비 민원 ${Math.round(increaseRate)}% 증가 - 대응 방안 검토 권장`,
+          source: 'complaint_analysis',
+          severity: increaseRate > 30 ? 'high' : 'medium',
+          category: 'complaint'
+        });
+      }
+    } catch (error) {
+      console.error('민원 알림 생성 실패:', error);
     }
   }
 
@@ -309,20 +336,23 @@ export class AlertService {
     this.thresholds = { ...this.thresholds, ...newThresholds };
   }
 
-  // 실시간 분석 실행
-  runRealTimeAnalysis(
-    investmentData: InvestmentData[],
-    renewableData: RenewableEnergyData[],
-    weatherData: WeatherData | null
-  ): void {
-    this.analyzeInvestmentData(investmentData);
-    this.analyzeRenewableEnergyData(renewableData);
-    this.analyzeWeatherData(weatherData);
-    this.analyzeSystemStatus();
-    
-    // 주기적으로 민원 데이터 체크 (실제로는 API 호출)
-    if (Math.random() < 0.1) { // 10% 확률로 민원 알림 생성
-      this.generateComplaintAlert();
+  // 전체 데이터 분석 실행
+  async runAnalysis(): Promise<void> {
+    try {
+      const [investmentData, renewableData, weatherData] = await Promise.all([
+        dataService.getInvestmentData(),
+        dataService.getRenewableEnergyData(),
+        dataService.getWeatherData()
+      ]);
+
+      this.analyzeInvestmentData(investmentData);
+      this.analyzeRenewableEnergyData(renewableData);
+      this.analyzeWeatherData(weatherData);
+      await this.analyzeSystemStatus(); // async로 변경
+
+      console.log('알림 분석 완료:', this.alerts.length, '개 알림 생성');
+    } catch (error) {
+      console.error('알림 분석 실패:', error);
     }
   }
 }

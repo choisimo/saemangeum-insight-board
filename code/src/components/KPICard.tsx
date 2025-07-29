@@ -13,6 +13,8 @@ interface KPICardProps {
   progress?: number;
   icon?: React.ReactNode;
   className?: string;
+  actualValue?: number; // 실제 진행된 값
+  remainingValue?: number; // 남은 값
 }
 
 export function KPICard({
@@ -24,7 +26,9 @@ export function KPICard({
   target,
   progress,
   icon,
-  className
+  className,
+  actualValue,
+  remainingValue
 }: KPICardProps) {
   const getTrendIcon = () => {
     switch (changeType) {
@@ -97,7 +101,30 @@ export function KPICard({
           )}
         </div>
 
-        {target && progress !== undefined && (
+        {/* 투자액 상세 정보 */}
+        {actualValue !== undefined && remainingValue !== undefined && (
+          <div className="mt-3 p-3 bg-muted/30 rounded-lg">
+            <div className="text-xs text-muted-foreground mb-2">투자 진행 현황</div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">진행된 투자액</span>
+                <span className="text-sm font-medium text-success">{actualValue.toLocaleString()}{unit}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">남은 투자액</span>
+                <span className="text-sm font-medium text-warning">{remainingValue.toLocaleString()}{unit}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 mt-2">
+                <div
+                  className="bg-gradient-to-r from-success to-success/80 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min((actualValue / (actualValue + remainingValue)) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {target && progress !== undefined && !actualValue && (
           <div className="mt-3">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>진행률</span>

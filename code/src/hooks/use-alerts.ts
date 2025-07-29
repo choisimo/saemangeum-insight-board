@@ -20,12 +20,14 @@ export function useAlerts() {
   }, [alertService]);
 
   // 실시간 분석 실행
-  const runAnalysis = useCallback(() => {
-    if (investmentData.length > 0 || renewableData.length > 0 || weatherData) {
-      alertService.runRealTimeAnalysis(investmentData, renewableData, weatherData);
+  const runAnalysis = useCallback(async () => {
+    try {
+      await alertService.runAnalysis();
       refreshAlerts();
+    } catch (error) {
+      console.error('알림 분석 실패:', error);
     }
-  }, [alertService, investmentData, renewableData, weatherData, refreshAlerts]);
+  }, [alertService, refreshAlerts]);
 
   // 알림 삭제
   const removeAlert = useCallback((id: string) => {

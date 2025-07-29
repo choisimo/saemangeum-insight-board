@@ -227,8 +227,8 @@ class ApiClient {
         return response.data.map((item: any, index: number) => ({
           id: `utility-${index}`,
           type: this.mapUtilityType(item['유틸리티종류'] || 'electricity'),
-          capacity: parseFloat(item['용량'] || item['설비용량'] || Math.random() * 1000 + 500),
-          usage: parseFloat(item['사용량'] || item['이용량'] || Math.random() * 800 + 200),
+          capacity: parseFloat(item['용량'] || item['설비용량']) || (500 + (index * 50)), // 인덱스 기반 일관된 용량
+          usage: parseFloat(item['사용량'] || item['이용량']) || (200 + (index * 30)), // 인덱스 기반 일관된 사용량
           region: item['지역'] || item['공구'] || `${index + 1}공구`
         }));
       }
@@ -250,7 +250,7 @@ class ApiClient {
           id: `permit-${index}`,
           location: item['위치'] || item['지역'] || `새만금 ${index + 1}공구`,
           buildingType: item['건축물종류'] || item['용도'] || '산업시설',
-          area: parseFloat(item['면적'] || item['건축면적'] || Math.random() * 10000 + 1000),
+          area: parseFloat(item['면적'] || item['건축면적']) || (1000 + (index * 500)), // 인덱스 기반 일관된 면적
           permitDate: item['허가일자'] || item['승인일자'] || new Date().toISOString().slice(0, 10),
           status: this.mapPermitStatus(item['상태'] || 'approved')
         }));
@@ -273,10 +273,10 @@ class ApiClient {
         return response.data.map((item: any, index: number) => ({
           id: `investment-${index}`,
           company: item['대상기업'] || `기업 ${index + 1}`,
-          sector: item['제도'] || this.getRandomSector(),
-          investment: this.extractInvestmentAmount(item['지원내용'] || '100억원'),
-          expectedJobs: Math.floor(Math.random() * 200 + 50), // API에 고용 데이터 없음
-          progress: Math.random() * 0.8 + 0.2,
+          sector: item['제도'] || this.getSectorByIndex(index),
+          investment: this.extractInvestmentAmount(item['지원내용'] || '100억원', index),
+          expectedJobs: Math.floor((this.extractInvestmentAmount(item['지원내용'] || '100억원', index) / 100) * 8 + 30), // 투자액 기반 고용 추정 (억원당 8명)
+          progress: Math.min(0.9, (index * 0.1 + 0.3)), // 인덱스 기반 일관된 진행률
           location: item['지역'] || `${index + 1}공구`,
           startDate: '2024-01-01',
           status: 'in-progress' as const
@@ -478,23 +478,24 @@ class ApiClient {
     return statusMap[status] || 'in-progress';
   }
 
-  private getRandomSector(): string {
+  private getSectorByIndex(index: number): string {
     const sectors = ['제조업', '서비스업', '건설업', '농업', '관광업', '물류업'];
-    return sectors[Math.floor(Math.random() * sectors.length)];
+    return sectors[index % sectors.length];
   }
 
-  private extractInvestmentAmount(supportContent: string): number {
+  private extractInvestmentAmount(supportContent: string, index: number = 0): number {
     // 지원내용에서 숫자와 단위를 추출
     const match = supportContent.match(/(\d+(?:\.\d+)?)%?(?:~(\d+(?:\.\d+)?)%?)?/);
     if (match) {
       const amount = parseFloat(match[1]);
       // 퍼센트인 경우 가정 투자액에 적용
       if (supportContent.includes('%')) {
-        return amount * 10; // 가정: 10억원 투자 기준
+        return amount * 15; // 가정: 15억원 투자 기준
       }
       return amount;
     }
-    return Math.random() * 500 + 100;
+    // 랜덤 대신 인덱스 기반 일관된 값
+    return (index * 50 + 200) % 800 + 100; // 100~900 억원 범위
   }
 
   private groupWeatherByLocation(data: any[]): Record<string, any[]> {

@@ -33,7 +33,16 @@ import {
 } from "lucide-react";
 
 interface KPIData {
-  totalInvestment: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral'; target?: number; progress?: number };
+  totalInvestment: { 
+    value: number; 
+    unit: string; 
+    change: number; 
+    changeType: 'increase' | 'decrease' | 'neutral'; 
+    target?: number; 
+    progress?: number;
+    actualValue?: number; // 실제 진행된 투자액
+    remainingValue?: number; // 남은 투자액
+  };
   newCompanies: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral'; target?: number; progress?: number };
   employment: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral'; target: number; progress: number };
   salesRate: { value: number; unit: string; change: number; changeType: 'increase' | 'decrease' | 'neutral' };
@@ -91,27 +100,52 @@ const Index = () => {
       };
     }
 
-    const totalInvestment = Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.investment, 0) / 100);
+    // 투자액 상세 계산
+    const totalCommittedInvestment = Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.investment, 0) / 100); // 전체 약정 투자액
+    const actualInvestment = Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + (item.investment * item.progress), 0) / 100); // 실제 진행된 투자액
+    const remainingInvestment = totalCommittedInvestment - actualInvestment; // 남은 투자액
+    
     const totalJobs = investmentData.reduce((sum: number, item: InvestmentData) => sum + item.expectedJobs, 0);
     const averageProgress = Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.progress, 0) / investmentData.length * 10) / 10;
     const totalCapacity = Math.round(renewableData.reduce((sum: number, item: RenewableEnergyData) => sum + item.capacity, 0) * 10) / 10;
 
-    const investmentTarget = Math.max(5000, totalInvestment * 1.5); // 현재 투자액의 1.5배 또는 최소 5000억원
+    const investmentTarget = Math.max(5000, totalCommittedInvestment * 1.5); // 현재 투자액의 1.5배 또는 최소 5000억원
     const companiesTarget = Math.max(100, investmentData.length * 2); // 현재 기업수의 2배 또는 최소 100개
     const employmentTarget = Math.max(2000, totalJobs * 1.8); // 현재 고용의 1.8배 또는 최소 2000명
     
     const avgProgress = investmentData.length > 0 ? investmentData.reduce((sum, item) => sum + item.progress, 0) / investmentData.length : 0;
     const investmentChange = Math.round((avgProgress / 10) * 10) / 10; // 진행률 기반 성장률
     const companiesChange = Math.round((investmentData.filter(item => item.status === 'completed').length / Math.max(investmentData.length, 1)) * 20 * 10) / 10;
-    const employmentChange = Math.round((totalJobs / Math.max(employmentTarget * 0.6, 1)) * 15 * 10) / 10;
+    
+    // 고용 변화율을 안정적으로 계산 (진행률 기반)
+    const employmentChange = Math.round((avgProgress / 100) * 12 * 10) / 10; // 진행률 기반 고용 성장률
+    
+    // 실제 데이터 기반 추가 변화율 계산
+    const salesRateChange = Math.round((averageProgress / 100) * 8 * 10) / 10; // 진행률 기반 판매율 변화
+    const renewableChange = renewableData.length > 0 
+      ? Math.round((renewableData.filter(r => r.status === 'operational').length / renewableData.length) * 25 * 10) / 10
+      : 0; // 운영 중인 재생에너지 비율 기반
+    
+    // 민원 데이터는 실제 API가 없으므로 투자 진행률 역비례로 추정
+    const complaintsCount = Math.max(0, Math.round(20 - (averageProgress / 5)));
+    const complaintsChange = averageProgress > 50 ? -Math.round((averageProgress - 50) / 5 * 10) / 10 : Math.round((50 - averageProgress) / 10 * 10) / 10;
 
     return {
-      totalInvestment: { value: totalInvestment, unit: "억원", change: investmentChange, changeType: "increase", target: investmentTarget, progress: Math.round((totalInvestment / investmentTarget) * 100 * 10) / 10 },
+      totalInvestment: { 
+        value: totalCommittedInvestment, 
+        unit: "억원", 
+        change: investmentChange, 
+        changeType: "increase", 
+        target: investmentTarget, 
+        progress: Math.round((totalCommittedInvestment / investmentTarget) * 100 * 10) / 10,
+        actualValue: actualInvestment, // 실제 진행된 투자액
+        remainingValue: remainingInvestment // 남은 투자액
+      },
       newCompanies: { value: investmentData.length, unit: "개", change: companiesChange, changeType: "increase", target: companiesTarget, progress: Math.round((investmentData.length / companiesTarget) * 100 * 10) / 10 },
       employment: { value: totalJobs, unit: "명", change: employmentChange, changeType: "increase", target: employmentTarget, progress: Math.round((totalJobs / employmentTarget) * 100 * 10) / 10 },
-      salesRate: { value: averageProgress, unit: "%", change: 5.2, changeType: "increase" },
-      renewableEnergy: { value: totalCapacity, unit: "MW", change: 22.1, changeType: "increase" },
-      complaints: { value: 12, unit: "건", change: -15.4, changeType: "decrease" }
+      salesRate: { value: averageProgress, unit: "%", change: salesRateChange, changeType: salesRateChange >= 0 ? "increase" : "decrease" },
+      renewableEnergy: { value: totalCapacity, unit: "MW", change: renewableChange, changeType: renewableChange >= 0 ? "increase" : "decrease" },
+      complaints: { value: complaintsCount, unit: "건", change: complaintsChange, changeType: complaintsChange >= 0 ? "increase" : "decrease" }
     };
   };
 
@@ -281,6 +315,8 @@ const Index = () => {
           unit={kpiData.totalInvestment.unit}
           change={kpiData.totalInvestment.change}
           changeType={kpiData.totalInvestment.changeType}
+          actualValue={kpiData.totalInvestment.actualValue}
+          remainingValue={kpiData.totalInvestment.remainingValue}
           icon={<DollarSign className="h-5 w-5" />}
         />
         <KPICard
