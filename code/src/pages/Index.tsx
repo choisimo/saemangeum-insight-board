@@ -4,6 +4,7 @@ import { KPICard } from "@/components/KPICard";
 import { PolicySimulator } from "@/components/PolicySimulator";
 import { SaemangumMap } from "@/components/SaemangumMap";
 import { InvestmentReport } from "@/components/InvestmentReport";
+import { DataSourceInfo } from "@/components/DataSourceInfo";
 import { 
   ApiError, 
   CardLoadingSkeleton, 
@@ -11,7 +12,7 @@ import {
   DataQualityIndicator 
 } from "@/components/ErrorBoundary";
 import { useInvestmentData, useRenewableEnergyData, useWeatherData, useDatasets } from "@/hooks/use-data";
-import type { InvestmentData, RenewableEnergyData } from "@/lib/data-service";
+import type { InvestmentData, RenewableEnergyData } from "@/services/data-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -73,14 +74,15 @@ const Index = () => {
 
   // 실제 데이터를 기반으로 KPI 계산
   const calculateKPIs = (): KPIData => {
-    if (!investmentData.length || !renewableData.length) {
+    // 데이터가 없을 때 기본값 설정 (구현 중 상태 표시)
+    if (!investmentData.length && !renewableData.length) {
       return {
         totalInvestment: { value: 0, unit: "억원", change: 0, changeType: "neutral" },
         newCompanies: { value: 0, unit: "개", change: 0, changeType: "neutral" },
         employment: { value: 0, unit: "명", change: 0, changeType: "neutral", target: 2000, progress: 0 },
         salesRate: { value: 0, unit: "%", change: 0, changeType: "neutral" },
         renewableEnergy: { value: 0, unit: "MW", change: 0, changeType: "neutral" },
-        complaints: { value: 12, unit: "건", change: -15.4, changeType: "decrease" }
+        complaints: { value: 0, unit: "건", change: 0, changeType: "neutral" }
       };
     }
 
@@ -175,7 +177,7 @@ const Index = () => {
         <Alert className="border-warning/20 bg-warning/5">
           <Clock className="h-4 w-4 text-warning" />
           <AlertDescription className="text-warning-foreground">
-            RE100 목표 달성률 {renewableData.length > 0 ? Math.round((renewableData.filter((r: RenewableEnergyData) => r.status === '운영중').length / renewableData.length) * 100) : 85}% 도달
+            RE100 목표 달성률 {renewableData.length > 0 ? Math.round((renewableData.filter((r: RenewableEnergyData) => r.status === 'operational').length / renewableData.length) * 100) : 85}% 도달
           </AlertDescription>
         </Alert>
         <Alert className="border-primary/20 bg-primary/5">
@@ -187,6 +189,14 @@ const Index = () => {
       </div>
 
       {/* 핵심 KPI 6개 */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">핵심 지표</h2>
+        <div className="flex items-center space-x-2">
+          <DataSourceInfo dataType="investment" compact />
+          <DataSourceInfo dataType="renewable" compact />
+          <DataSourceInfo dataType="weather" compact />
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <KPICard
           title="총 투자유치액"

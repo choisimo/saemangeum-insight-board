@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInvestmentData, useDatasets, useLandData } from "@/hooks/use-data";
-import type { InvestmentData, LandData, ReclaimData } from "@/lib/data-service";
+import type { InvestmentData, LandData, ReclaimData } from "@/services/data-service";
 import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2 } from "lucide-react";
+import { KakaoMap } from "@/components/KakaoMap";
+import { DataSourceInfo } from "@/components/DataSourceInfo";
 
 interface DistrictData {
   id: string;
@@ -45,9 +47,44 @@ export function SaemangumMap() {
   }
 
   // 실제 데이터를 기반으로 공구별 정보 업데이트
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-success';
+      case 'in-progress': return 'bg-warning';
+      case 'planned': return 'bg-muted';
+      default: return 'bg-muted';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed': return '완료';
+      case 'in-progress': return '진행중';
+      case 'planned': return '계획';
+      default: return '미정';
+    }
+  };
+
+  const getIndustryIcon = (industry: string) => {
+    switch (industry) {
+      case '이차전지': return <Zap className="h-4 w-4" />;
+      case '재생에너지': return <Wind className="h-4 w-4" />;
+      case '스마트팜': return <Droplets className="h-4 w-4" />;
+      case 'IT융합': return <Building2 className="h-4 w-4" />;
+      case '바이오': return <Factory className="h-4 w-4" />;
+      case '항공우주': return <Building2 className="h-4 w-4" />;
+      default: return <Building2 className="h-4 w-4" />;
+    }
+  };
+
   const updatedDistricts = districts.map(district => {
+    // 해당 지역(김제시, 부안군)과 관련된 투자 데이터 필터링
     const relatedInvestments = investmentData.filter((inv: InvestmentData) => 
-      inv.location && inv.location.includes(district.name.replace('공구', ''))
+      inv.location && (
+        (district.name.includes('1') || district.name.includes('2')) && inv.location.includes('김제') ||
+        (district.name.includes('3') || district.name.includes('4')) && inv.location.includes('부안') ||
+        (district.name.includes('5') || district.name.includes('6')) && inv.location.includes('전라북도')
+      )
     );
     
     if (relatedInvestments.length > 0) {
@@ -81,14 +118,21 @@ export function SaemangumMap() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Map className="h-5 w-5 text-primary" />
-          <span>새만금 공간정보 시스템</span>
-          {datasets && (
-            <Badge variant="outline" className="ml-auto">
-              {datasets.summary.categories.join(', ')} 데이터 연동
-            </Badge>
-          )}
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Map className="h-5 w-5 text-primary" />
+            <span>새만금 공간정보 시스템</span>
+            {datasets && (
+              <Badge variant="outline">
+                {datasets.summary.total_datasets}개 데이터셋 연동
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <DataSourceInfo dataType="land" compact />
+            <DataSourceInfo dataType="investment" compact />
+            <DataSourceInfo dataType="renewable" compact />
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -124,89 +168,33 @@ export function SaemangumMap() {
               </Button>
             </div>
 
-            {/* 지도 영역 (시각적 표현) */}
-            <div className="relative bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6 min-h-[400px] border-2 border-dashed border-primary/20">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg" />
-              
-              {/* 새만금 로고/제목 */}
-              <div className="absolute top-4 left-4 z-10">
-                <Badge variant="secondary" className="text-sm font-semibold">
-                  새만금 개발 현황
-                </Badge>
-              </div>
-
-              {/* 공구 표시 (격자 형태로 배치) */}
-              <div className="relative grid grid-cols-3 gap-4 h-full pt-12">
-                {updatedDistricts.map((district, index) => (
-                  <div
-                    key={district.id}
-                    className={`
-                      relative cursor-pointer transition-all duration-300 rounded-lg p-4 border-2 border-white/50
-                      hover:scale-105 hover:shadow-lg hover:z-20
-                      ${getDistrictColor(district)}
-                      ${selectedDistrict?.id === district.id ? 'ring-4 ring-primary/50 shadow-xl scale-105' : ''}
-                    `}
-                    onClick={() => setSelectedDistrict(district)}
-                  >
-                    <div className="text-white font-bold text-center">
-                      <div className="text-sm">{district.name}</div>
-                      {viewMode === 'sales' && (
-                        <div className="text-lg">{district.salesRate}%</div>
-                      )}
-                      {viewMode === 'companies' && (
-                        <div className="text-lg">{district.companies}개</div>
-                      )}
-                      {viewMode === 'industry' && (
-                        <div className="flex items-center justify-center mt-1">
-                          {getIndustryIcon(district.industry)}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* 상태 표시 */}
-                    <div className="absolute top-1 right-1">
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(district.status)}`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 범례 */}
-              <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 space-y-2">
-                <div className="text-xs font-semibold text-foreground">범례</div>
-                {viewMode === 'sales' && (
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-success rounded" />
-                      <span>80% 이상</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-warning rounded" />
-                      <span>50-79%</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-destructive/60 rounded" />
-                      <span>50% 미만</span>
-                    </div>
-                  </div>
-                )}
-                {viewMode === 'industry' && (
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-success rounded" />
-                      <span>완료</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-warning rounded" />
-                      <span>진행중</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-muted rounded" />
-                      <span>계획</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* 카카오맵 지도 */}
+            <div className="space-y-4">
+              <KakaoMap 
+                data={[
+                  // 투자 데이터를 지도 데이터로 변환
+                  ...investmentData.slice(0, 5).map((item, index) => ({
+                    id: item.id,
+                    name: item.company,
+                    lat: 35.7661 + (Math.random() - 0.5) * 0.02, // 새만금 주변 랜덤 좌표
+                    lng: 126.5572 + (Math.random() - 0.5) * 0.02,
+                    type: 'investment' as const,
+                    description: `${item.sector} 분야 투자`,
+                    value: `${item.investment}억원`
+                  })),
+                  // 재생에너지 데이터 추가 (데이터가 있는 경우)
+                  // ...renewableData.slice(0, 3).map((item, index) => ({
+                  //   id: item.id,
+                  //   name: `${item.type} 발전소`,
+                  //   lat: 35.7661 + (Math.random() - 0.5) * 0.02,
+                  //   lng: 126.5572 + (Math.random() - 0.5) * 0.02,
+                  //   type: 'renewable' as const,
+                  //   description: `${item.capacity}MW 발전 시설`,
+                  //   value: `${item.capacity}MW`
+                  // }))
+                ]}
+                height="500px"
+              />
             </div>
 
             {/* 선택된 공구 상세 정보 */}
@@ -258,9 +246,9 @@ export function SaemangumMap() {
                   <div className="text-sm">
                     <Badge variant="outline" className="mb-2">실제 지적 데이터</Badge>
                     <p><strong>소재지:</strong> {'location' in landData[0] ? (landData[0] as LandData).location : (landData[0] as ReclaimData).region}</p>
-                    <p><strong>지목:</strong> {'landCategory' in landData[0] ? (landData[0] as LandData).landCategory : (landData[0] as ReclaimData).landType}</p>
-                    <p><strong>면적:</strong> {'area' in landData[0] ? (landData[0] as LandData).area : (landData[0] as ReclaimData).plannedArea}㎡</p>
-                    <p><strong>소유자:</strong> {'owner' in landData[0] ? (landData[0] as LandData).owner : '새만금개발청'}</p>
+                    <p><strong>지목:</strong> {'landType' in landData[0] ? (landData[0] as LandData).landType : '간체지'}</p>
+                    <p><strong>면적:</strong> {landData[0].area.toLocaleString()}㎡</p>
+                    <p><strong>소유자:</strong> 새만금개발청</p>
                   </div>
                 </Card>
               )}

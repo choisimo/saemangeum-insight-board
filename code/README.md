@@ -11,8 +11,10 @@
 - ✅ **API 통합**: 9개 새만금개발청 공공데이터 API 연동
 - ✅ **에러 처리**: 강력한 에러 복구 및 재시도 메커니즘
 - ✅ **데이터 캐싱**: 효율적인 5분 캐시 시스템
+- ✅ **카카오맵 통합**: 새만금 지역 공간 데이터 시각화
+- ✅ **데이터 출처 정보**: 투명성 및 신뢰성 향상
 - 🔄 **정책 시뮬레이션**: What-if 분석 도구
-- 🔄 **공간정보 시각화**: 지도 기반 데이터 분석
+- 🔄 **고도화된 공간정보**: 지도 기반 데이터 분석
 
 ## 🏗️ Technology Stack
 
@@ -44,7 +46,8 @@ npm install
 
 # 2. 환경변수 설정 (필요시)
 cp .env.example .env
-# API 키 설정
+# 데이터포털 API 키 설정: https://www.data.go.kr
+# 카카오맵 API 키 설정: https://developers.kakao.com
 
 # 3. 개발 서버 시작
 npm run dev
@@ -76,7 +79,9 @@ src/
 │   ├── KPICard.tsx        # KPI 카드 컴포넌트
 │   ├── Navigation.tsx     # 네비게이션
 │   ├── PolicySimulator.tsx
-│   ├── SaemangumMap.tsx
+│   ├── SaemangumMap.tsx   # 공간정보 지도 컴포넌트
+│   ├── KakaoMap.tsx       # 카카오맵 지도 컴포넌트
+│   ├── DataSourceInfo.tsx # 데이터 출처 정보 컴포넌트
 │   └── InvestmentReport.tsx
 ├── hooks/
 │   └── use-data.ts        # 데이터 패칭 훅

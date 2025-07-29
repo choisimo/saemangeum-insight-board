@@ -13,6 +13,7 @@ import {
   Building2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SettingsDialog } from "./SettingsDialog";
 
 interface NavigationProps {
   activeTab: string;
@@ -29,6 +30,8 @@ const navigationItems = [
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   return (
     <>
@@ -78,10 +81,28 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           <Badge variant="outline" className="bg-success/10 text-success border-success/20">
             실시간 연결됨
           </Badge>
-          <Button variant="ghost" size="sm">
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
+          <SettingsDialog 
+            open={isSettingsOpen} 
+            onOpenChange={setIsSettingsOpen}
+            trigger={
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setIsSettingsOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            }
+          />
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              setIsUserMenuOpen(true);
+              // TODO: 사용자 프로필 메뉴 구현
+              alert('사용자 프로필 기능이 곧 추가될 예정입니다.');
+            }}
+          >
             <User className="h-4 w-4" />
           </Button>
         </div>
@@ -98,13 +119,28 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             <h1 className="font-bold text-base text-foreground">새만금</h1>
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center space-x-2">
+            <SettingsDialog 
+              open={isSettingsOpen} 
+              onOpenChange={setIsSettingsOpen}
+              trigger={
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsSettingsOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              }
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
 
         {/* 모바일 메뉴 */}

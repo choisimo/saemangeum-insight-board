@@ -12,7 +12,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5분
-      cacheTime: 10 * 60 * 1000, // 10분
+      gcTime: 10 * 60 * 1000, // 10분 (cacheTime 대신 gcTime 사용)
       refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
         // 네트워크 에러인 경우 3회까지 재시도

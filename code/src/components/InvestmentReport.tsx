@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useInvestmentData, useDatasets } from "@/hooks/use-data";
-import type { InvestmentData } from "@/lib/data-service";
+import type { InvestmentData } from "@/services/data-service";
 import { 
   Building2, 
   TrendingUp, 
@@ -39,7 +39,7 @@ export function InvestmentReport() {
   if (error) {
     return (
       <div className="text-center p-8 text-destructive">
-        <p>데이터를 불러오는 중 오류가 발생했습니다: {error}</p>
+        <p>데이터를 불러오는 중 오류가 발생했습니다: {error?.message || '알 수 없는 오류'}</p>
       </div>
     );
   }

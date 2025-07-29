@@ -1,5 +1,5 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { dataService } from '@/lib/data-service';
+import { dataService } from '@/services/data-service';
 import type { 
   InvestmentData, 
   RenewableEnergyData, 
@@ -10,12 +10,12 @@ import type {
   BuildingPermitData,
   UtilityData,
   DataResponse
-} from '@/lib/data-service';
+} from '@/services/data-service';
 
 // React Query 설정
 const QUERY_OPTIONS = {
   staleTime: 5 * 60 * 1000, // 5분
-  cacheTime: 10 * 60 * 1000, // 10분
+  gcTime: 10 * 60 * 1000, // 10분
   refetchOnWindowFocus: false,
   retry: 3,
   retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
