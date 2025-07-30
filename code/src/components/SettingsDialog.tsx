@@ -66,7 +66,6 @@ interface SettingsConfig {
   compactMode: boolean;
   
   // 데이터 설정
-  enableMockData: boolean;
   dataRetentionDays: number;
   enableDataValidation: boolean;
 }
@@ -104,7 +103,6 @@ const defaultSettings: SettingsConfig = {
   theme: 'system',
   language: 'ko',
   compactMode: false,
-  enableMockData: false,
   dataRetentionDays: 30,
   enableDataValidation: true
 };
@@ -495,19 +493,6 @@ export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogPr
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>모의 데이터 활성화</Label>
-                    <p className="text-sm text-muted-foreground">
-                      API 연결 실패 시 모의 데이터를 사용합니다.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.enableMockData}
-                    onCheckedChange={(checked) => updateSetting('enableMockData', checked)}
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="data-retention">데이터 보관 기간 (일)</Label>
                   <Input

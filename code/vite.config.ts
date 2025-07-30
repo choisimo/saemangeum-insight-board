@@ -7,6 +7,7 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
+    origin: "https://saemangeum.nodove.com",
   },
   plugins: [
     react(),

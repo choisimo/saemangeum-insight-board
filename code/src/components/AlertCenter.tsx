@@ -91,7 +91,7 @@ const SeverityBadge = ({ severity }: { severity: AlertData['severity'] }) => {
       case 'low':
         return '낮음';
       default:
-        return '알 수 없음';
+        return '';
     }
   };
 

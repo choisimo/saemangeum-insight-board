@@ -284,25 +284,12 @@ export class AlertService {
     }
   }
 
-  // 실제 민원 데이터 기반 알림 생성 (민원 API 연동 필요)
+  // 실제 민원 데이터 기반 알림 생성
   async generateComplaintAlert(): Promise<void> {
     try {
-      // 실제 민원 데이터를 가져와서 증가율 계산
-      // 현재는 민원 API가 없으므로 기본 알림만 생성
-      const currentComplaints = 20; // 기본값
-      const previousComplaints = 18; // 이전 달 기본값
-      const increaseRate = ((currentComplaints - previousComplaints) / previousComplaints) * 100;
-      
-      if (increaseRate > this.thresholds.complaintIncreasePercent) {
-        this.addAlert({
-          type: 'warning',
-          title: '민원 증가 추세 감지',
-          message: `전월 대비 민원 ${Math.round(increaseRate)}% 증가 - 대응 방안 검토 권장`,
-          source: 'complaint_analysis',
-          severity: increaseRate > 30 ? 'high' : 'medium',
-          category: 'complaint'
-        });
-      }
+      // 실제 민원 API를 사용해야 하므로 현재는 비활성화
+      // 민원 API가 연동되면 이 부분을 활성화
+      return;
     } catch (error) {
       console.error('민원 알림 생성 실패:', error);
     }

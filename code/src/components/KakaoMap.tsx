@@ -39,38 +39,7 @@ export function KakaoMap({ data = [], height = "400px" }: KakaoMapProps) {
     lng: 126.7041
   };
 
-  // 샘플 데이터 (실제 새만금 지역 좌표)
-  const sampleData: MapData[] = [
-    {
-      id: 'inv-1',
-      name: '새만금 태양광 발전소',
-      lat: 35.7700,
-      lng: 126.5500,
-      type: 'renewable',
-      description: '300MW 태양광 발전 시설',
-      value: '300MW'
-    },
-    {
-      id: 'inv-2', 
-      name: '새만금 산업단지',
-      lat: 35.7600,
-      lng: 126.5600,
-      type: 'investment',
-      description: '제조업 투자유치 지역',
-      value: '1,500억원'
-    },
-    {
-      id: 'inf-1',
-      name: '새만금 신항만',
-      lat: 35.7650,
-      lng: 126.5450,
-      type: 'infrastructure',
-      description: '물류 허브 항만 시설',
-      value: '완공 예정'
-    }
-  ];
-
-  const mapData = data.length > 0 ? data : sampleData;
+  const mapData = data;
 
   // 카카오맵 스크립트 동적 로드
   const loadKakaoMapScript = (apiKey: string): Promise<void> => {
@@ -442,22 +411,6 @@ export function KakaoMap({ data = [], height = "400px" }: KakaoMapProps) {
                     </a>
                   </Button>
                 )}
-              </div>
-              
-              {/* 샘플 데이터 표시 */}
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium mb-2 flex items-center">
-                  <MapPin className="h-3 w-3 mr-1" />
-                  새만금 지역 주요 시설 (샘플 데이터)
-                </p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  {sampleData.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.name}</span>
-                      <span>{item.value}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </AlertDescription>

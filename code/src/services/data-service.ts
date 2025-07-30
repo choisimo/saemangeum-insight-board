@@ -167,27 +167,22 @@ class ApiClient {
 
       if (response.data && response.data.length > 0) {
         const weatherItem = response.data[0];
+        const groupedData = this.groupWeatherByLocation(response.data);
+        const firstLocation = Object.keys(groupedData)[0];
+        const locationData = groupedData[firstLocation] || [];
+        
         return {
-          temperature: parseFloat(weatherItem['예보 값'] || '20'),
-          humidity: 65,
-          windSpeed: parseFloat(weatherItem['예보 값'] || '3'),
-          windDirection: 'SW',
-          precipitation: 0,
-          visibility: 10,
+          temperature: this.extractTemperature(locationData),
+          humidity: this.extractHumidity(locationData),
+          windSpeed: this.extractWindSpeed(locationData),
+          windDirection: this.extractWindDirection(locationData),
+          precipitation: this.extractPrecipitation(locationData),
+          visibility: this.extractVisibility(locationData),
           timestamp: new Date().toISOString()
         };
       }
 
-      // 기본값 반환
-      return {
-        temperature: 20,
-        humidity: 65,
-        windSpeed: 3,
-        windDirection: 'SW',
-        precipitation: 0,
-        visibility: 10,
-        timestamp: new Date().toISOString()
-      };
+      return null;
     } catch (error) {
       console.error('기상 데이터 조회 실패:', error);
       return null;
@@ -201,17 +196,17 @@ class ApiClient {
       
       if (response.data && Array.isArray(response.data)) {
         return response.data.map((item: any, index: number) => ({
-          id: `renewable-${index}`,
-          region: item['위치'] || `새만금 ${index + 1}공구`,
-          type: this.mapEnergyType(item['발전유형'] || 'solar'),
-          capacity: parseFloat(item['용량(기가와트)'] || '0.1') * 1000, // GW를 MW로 변환
-          status: 'operational' as const,
-          operator: `재생에너지 사업자 ${index + 1}`,
-          installDate: '2024-01-01'
-        }));
+          id: item['ID'] || `renewable-${index}`,
+          region: item['위치'],
+          type: this.mapEnergyType(item['발전유형']),
+          capacity: parseFloat(item['용량(기가와트)']) * 1000, // GW를 MW로 변환
+          status: this.mapEnergyStatus(item['상태']),
+          operator: item['운영자'],
+          installDate: item['설치일']
+        })).filter(item => item.region && item.type && item.capacity > 0);
       }
 
-      throw new Error('데이터 없음');
+      return [];
     } catch (error) {
       console.error('재생에너지 데이터 조회 실패:', error);
       return [];
@@ -225,15 +220,15 @@ class ApiClient {
       
       if (response.data && Array.isArray(response.data)) {
         return response.data.map((item: any, index: number) => ({
-          id: `utility-${index}`,
-          type: this.mapUtilityType(item['유틸리티종류'] || 'electricity'),
-          capacity: parseFloat(item['용량'] || item['설비용량']) || (500 + (index * 50)), // 인덱스 기반 일관된 용량
-          usage: parseFloat(item['사용량'] || item['이용량']) || (200 + (index * 30)), // 인덱스 기반 일관된 사용량
-          region: item['지역'] || item['공구'] || `${index + 1}공구`
-        }));
+          id: item['ID'] || `utility-${index}`,
+          type: this.mapUtilityType(item['유틸리티종류']),
+          capacity: parseFloat(item['용량'] || item['설비용량']),
+          usage: parseFloat(item['사용량'] || item['이용량']),
+          region: item['지역'] || item['공구']
+        })).filter(item => item.type && item.capacity && item.usage && item.region);
       }
 
-      throw new Error('데이터 없음');
+      return [];
     } catch (error) {
       console.error('유틸리티 데이터 조회 실패:', error);
       return [];
@@ -247,16 +242,16 @@ class ApiClient {
       
       if (response.data && Array.isArray(response.data)) {
         return response.data.map((item: any, index: number) => ({
-          id: `permit-${index}`,
-          location: item['위치'] || item['지역'] || `새만금 ${index + 1}공구`,
-          buildingType: item['건축물종류'] || item['용도'] || '산업시설',
-          area: parseFloat(item['면적'] || item['건축면적']) || (1000 + (index * 500)), // 인덱스 기반 일관된 면적
-          permitDate: item['허가일자'] || item['승인일자'] || new Date().toISOString().slice(0, 10),
-          status: this.mapPermitStatus(item['상태'] || 'approved')
-        }));
+          id: item['ID'] || `permit-${index}`,
+          location: item['위치'] || item['지역'],
+          buildingType: item['건축물종류'] || item['용도'],
+          area: parseFloat(item['면적'] || item['건축면적']),
+          permitDate: item['허가일자'] || item['승인일자'],
+          status: this.mapPermitStatus(item['상태'])
+        })).filter(item => item.location && item.buildingType && item.area && item.permitDate);
       }
 
-      throw new Error('데이터 없음');
+      return [];
     } catch (error) {
       console.error('건축허가 데이터 조회 실패:', error);
       return [];
@@ -266,134 +261,96 @@ class ApiClient {
   // 투자 데이터 조회 (보조금 지원 현황 기반)
   async getInvestmentData(): Promise<InvestmentData[]> {
     try {
-      // 실제 투자인센티브보조금지원현황 API 사용
       const response = await this.makeRequest('/15121622/v1/uddi:d8e95b9d-7808-4643-b2f5-c1fa1a649ede');
       
       if (response.data && Array.isArray(response.data)) {
         return response.data.map((item: any, index: number) => ({
-          id: `investment-${index}`,
-          company: item['대상기업'] || `기업 ${index + 1}`,
-          sector: item['제도'] || this.getSectorByIndex(index),
-          investment: this.extractInvestmentAmount(item['지원내용'] || '100억원', index),
-          expectedJobs: Math.floor((this.extractInvestmentAmount(item['지원내용'] || '100억원', index) / 100) * 8 + 30), // 투자액 기반 고용 추정 (억원당 8명)
-          progress: Math.min(0.9, (index * 0.1 + 0.3)), // 인덱스 기반 일관된 진행률
-          location: item['지역'] || `${index + 1}공구`,
-          startDate: '2024-01-01',
-          status: 'in-progress' as const
-        }));
+          id: item['ID'] || `investment-${index}`,
+          company: item['대상기업'],
+          sector: item['제도'],
+          investment: this.extractInvestmentAmount(item['지원내용']),
+          expectedJobs: this.calculateExpectedJobs(item['지원내용'], item['예상고용']),
+          progress: this.calculateProgress(item['진행상태'], item['시작일']),
+          location: item['지역'],
+          startDate: item['시작일'],
+          status: this.mapInvestmentStatus(item['상태'])
+        })).filter(item => item.company && item.sector && item.investment > 0);
       }
 
-      throw new Error('데이터 없음');
+      return [];
     } catch (error) {
       console.error('투자 데이터 조회 실패:', error);
-      // 실제 API 실패 시 구현 중 메시지 표시
       return [];
     }
   }
 
-  // 교통량 데이터 조회 (투자 데이터 기반 추정)
+  // 교통량 데이터 조회
   async getTrafficData(): Promise<TrafficData[]> {
     try {
-      const investmentData = await this.getInvestmentData();
+      const response = await this.makeRequest('/15138304/v1/uddi:traffic-data-endpoint');
       
-      // 투자 데이터를 기반으로 교통량 추정
-      const trafficEstimates: TrafficData[] = [
-        {
-          id: 'traffic-1',
-          location: '새만금 신항만',
-          totalTraffic: Math.round(investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800),
-          timestamp: new Date().toISOString(),
+      if (response.data && Array.isArray(response.data)) {
+        return response.data.map((item: any, index: number) => ({
+          id: item['ID'] || `traffic-${index}`,
+          location: item['위치'],
+          totalTraffic: parseInt(item['총교통량']),
+          timestamp: item['측정시간'] || new Date().toISOString(),
           vehicleTypes: {
-            passenger: Math.round((investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800) * 0.6),
-            truck: Math.round((investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800) * 0.3),
-            bus: Math.round((investmentData.filter(inv => inv.sector.includes('물류')).length * 150 + 800) * 0.1)
+            passenger: parseInt(item['승용차']) || 0,
+            truck: parseInt(item['화물차']) || 0,
+            bus: parseInt(item['버스']) || 0
           }
-        },
-        {
-          id: 'traffic-2',
-          location: '새만금 산업단지',
-          totalTraffic: Math.round(investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600),
-          timestamp: new Date().toISOString(),
-          vehicleTypes: {
-            passenger: Math.round((investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600) * 0.5),
-            truck: Math.round((investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600) * 0.4),
-            bus: Math.round((investmentData.filter(inv => inv.sector.includes('제조')).length * 120 + 600) * 0.1)
-          }
-        },
-        {
-          id: 'traffic-3',
-          location: '새만금 관광단지',
-          totalTraffic: Math.round(investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400),
-          timestamp: new Date().toISOString(),
-          vehicleTypes: {
-            passenger: Math.round((investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400) * 0.8),
-            truck: Math.round((investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400) * 0.1),
-            bus: Math.round((investmentData.filter(inv => inv.sector.includes('관광')).length * 200 + 400) * 0.1)
-          }
-        }
-      ];
-      
-      console.log('교통량 데이터 추정 완료:', trafficEstimates.length, '개 지점');
-      return trafficEstimates;
+        })).filter(item => item.location && item.totalTraffic > 0);
+      }
+
+      return [];
     } catch (error) {
-      console.error('교통량 데이터 추정 실패:', error);
+      console.error('교통량 데이터 조회 실패:', error);
       return [];
     }
   }
 
-  // 토지 데이터 조회 (투자 및 재생에너지 데이터 기반)
+  // 토지 데이터 조회
   async getLandData(): Promise<Array<LandData | ReclaimData>> {
     try {
-      const [investmentData, renewableData] = await Promise.all([
-        this.getInvestmentData(),
-        this.getRenewableEnergyData()
+      const [landResponse, reclaimResponse] = await Promise.all([
+        this.makeRequest('/15138304/v1/uddi:land-data-endpoint'),
+        this.makeRequest('/15138304/v1/uddi:reclaim-data-endpoint')
       ]);
       
       const landData: Array<LandData | ReclaimData> = [];
       
-      // 투자 데이터 기반 토지 사용 현황
-      const sectorLandUse = investmentData.reduce((acc, inv) => {
-        const sector = inv.sector || '기타';
-        if (!acc[sector]) {
-          acc[sector] = { count: 0, totalInvestment: 0 };
-        }
-        acc[sector].count += 1;
-        acc[sector].totalInvestment += inv.investment;
-        return acc;
-      }, {} as Record<string, { count: number; totalInvestment: number }>);
-      
-      // 섹터별 토지 데이터 생성
-      Object.entries(sectorLandUse).forEach(([sector, data], index) => {
-        const estimatedArea = Math.round(data.totalInvestment / 100 * 2.5); // 투자액 100억당 2.5ha 추정
+      // 토지 데이터 처리
+      if (landResponse.data && Array.isArray(landResponse.data)) {
+        const lands = landResponse.data.map((item: any, index: number) => ({
+          id: item['ID'] || `land-${index}`,
+          location: item['위치'],
+          area: parseFloat(item['면적']),
+          landType: item['토지종류'],
+          usage: item['용도'],
+          price: parseFloat(item['가격'])
+        } as LandData)).filter(item => item.location && item.area > 0);
         
-        landData.push({
-          id: `land-${index + 1}`,
-          location: `새만금 ${index + 1}구역`,
-          area: estimatedArea,
-          landType: '산업용지',
-          usage: sector,
-          price: Math.round(data.totalInvestment / estimatedArea * 10000) // 평방미터당 가격 추정
-        } as LandData);
-      });
+        landData.push(...lands);
+      }
       
-      // 재생에너지 기반 간척지 데이터
-      renewableData.forEach((renewable, index) => {
-        if (renewable.capacity > 10) { // 10MW 이상만
-          landData.push({
-            id: `reclaim-${index + 1}`,
-            region: `새만금 간척지 ${index + 1}구역`,
-            area: Math.round(renewable.capacity * 4), // MW당 4ha 추정
-            completionRate: renewable.status === 'operational' ? 100 : 75,
-            purpose: '재생에너지',
-            startDate: new Date().toISOString().split('T')[0] // 현재 날짜로 설정
-          } as ReclaimData);
-        }
-      });
+      // 간척 데이터 처리
+      if (reclaimResponse.data && Array.isArray(reclaimResponse.data)) {
+        const reclaims = reclaimResponse.data.map((item: any, index: number) => ({
+          id: item['ID'] || `reclaim-${index}`,
+          region: item['지역'],
+          area: parseFloat(item['면적']),
+          completionRate: parseFloat(item['완성률']),
+          purpose: item['목적'],
+          startDate: item['시작일']
+        } as ReclaimData)).filter(item => item.region && item.area > 0);
+        
+        landData.push(...reclaims);
+      }
       
-      console.log('토지 데이터 생성 완료:', landData.length, '개 구역');
       return landData;
     } catch (error) {
-      console.error('토지 데이터 생성 실패:', error);
+      console.error('토지 데이터 조회 실패:', error);
       return [];
     }
   }
@@ -401,22 +358,26 @@ class ApiClient {
   // 데이터셋 메타데이터 조회
   async loadDatasets(): Promise<DataResponse> {
     try {
-      // 여러 API 엔드포인트에서 메타데이터 수집
-      const datasets = [
-        { name: '기상정보', description: '새만금 기상 데이터', record_count: 39300, last_updated: new Date().toISOString() },
-        { name: '재생에너지', description: '재생에너지 사업 정보', record_count: 156, last_updated: new Date().toISOString() },
-        { name: '유틸리티', description: '산업단지 유틸리티 현황', record_count: 89, last_updated: new Date().toISOString() },
-        { name: '건축허가', description: '건축물 허가 현황', record_count: 234, last_updated: new Date().toISOString() },
-        { name: '투자유치', description: '투자 인센티브 지원 현황', record_count: 67, last_updated: new Date().toISOString() }
-      ];
+      const metaResponse = await this.makeRequest('/metadata/summary');
+      
+      if (metaResponse.summary && metaResponse.datasets) {
+        return {
+          summary: {
+            total_datasets: metaResponse.summary.total_datasets,
+            last_updated: metaResponse.summary.last_updated,
+            data_quality_score: metaResponse.summary.data_quality_score
+          },
+          datasets: metaResponse.datasets
+        };
+      }
 
       return {
         summary: {
-          total_datasets: datasets.length,
+          total_datasets: 0,
           last_updated: new Date().toISOString(),
-          data_quality_score: 85
+          data_quality_score: 0
         },
-        datasets
+        datasets: []
       };
     } catch (error) {
       console.error('데이터셋 메타데이터 조회 실패:', error);
@@ -426,6 +387,8 @@ class ApiClient {
 
   // 유틸리티 메서드들
   private mapEnergyType(type: string): 'solar' | 'wind' | 'hydro' | 'other' {
+    if (!type) return 'other';
+    
     const typeMap: Record<string, 'solar' | 'wind' | 'hydro' | 'other'> = {
       '태양광': 'solar',
       '풍력': 'wind',
@@ -438,6 +401,8 @@ class ApiClient {
   }
 
   private mapEnergyStatus(status: string): 'operational' | 'under-construction' | 'planned' {
+    if (!status) return 'operational';
+    
     const statusMap: Record<string, 'operational' | 'under-construction' | 'planned'> = {
       '운영중': 'operational',
       '건설중': 'under-construction',
@@ -450,6 +415,8 @@ class ApiClient {
   }
 
   private mapUtilityType(type: string): 'electricity' | 'water' | 'gas' | 'telecommunications' {
+    if (!type) return 'electricity';
+    
     const typeMap: Record<string, 'electricity' | 'water' | 'gas' | 'telecommunications'> = {
       '전력': 'electricity',
       '상수도': 'water',
@@ -460,6 +427,8 @@ class ApiClient {
   }
 
   private mapPermitStatus(status: string): 'approved' | 'pending' | 'rejected' {
+    if (!status) return 'approved';
+    
     const statusMap: Record<string, 'approved' | 'pending' | 'rejected'> = {
       '승인': 'approved',
       '대기': 'pending',
@@ -469,33 +438,83 @@ class ApiClient {
   }
 
   private mapInvestmentStatus(status: string): 'planning' | 'in-progress' | 'completed' | 'delayed' {
+    if (!status) return 'planning';
+    
     const statusMap: Record<string, 'planning' | 'in-progress' | 'completed' | 'delayed'> = {
       '계획': 'planning',
       '진행중': 'in-progress',
       '완료': 'completed',
       '지연': 'delayed'
     };
-    return statusMap[status] || 'in-progress';
+    return statusMap[status] || 'planning';
   }
 
-  private getSectorByIndex(index: number): string {
-    const sectors = ['제조업', '서비스업', '건설업', '농업', '관광업', '물류업'];
-    return sectors[index % sectors.length];
-  }
-
-  private extractInvestmentAmount(supportContent: string, index: number = 0): number {
-    // 지원내용에서 숫자와 단위를 추출
-    const match = supportContent.match(/(\d+(?:\.\d+)?)%?(?:~(\d+(?:\.\d+)?)%?)?/);
+  private extractInvestmentAmount(supportContent: string): number {
+    if (!supportContent) return 0;
+    
+    const match = supportContent.match(/(\d+(?:\.\d+)?)[억만원]/);
     if (match) {
       const amount = parseFloat(match[1]);
-      // 퍼센트인 경우 가정 투자액에 적용
-      if (supportContent.includes('%')) {
-        return amount * 15; // 가정: 15억원 투자 기준
+      if (supportContent.includes('억')) {
+        return amount;
+      } else if (supportContent.includes('만')) {
+        return amount / 10000;
       }
-      return amount;
     }
-    // 랜덤 대신 인덱스 기반 일관된 값
-    return (index * 50 + 200) % 800 + 100; // 100~900 억원 범위
+    return 0;
+  }
+
+  private calculateExpectedJobs(supportContent: string, jobsField?: string): number {
+    if (jobsField && !isNaN(parseInt(jobsField))) {
+      return parseInt(jobsField);
+    }
+    
+    const investment = this.extractInvestmentAmount(supportContent);
+    if (investment > 0) {
+      return Math.floor(investment / 10); // 10억당 1명 추정
+    }
+    
+    return 0;
+  }
+
+  private calculateProgress(status: string, startDate?: string): number {
+    if (!status && !startDate) return 0;
+    
+    if (status === '완료') return 1;
+    if (status === '진행중' && startDate) {
+      const start = new Date(startDate);
+      const now = new Date();
+      const monthsElapsed = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30);
+      return Math.min(0.9, monthsElapsed / 24); // 24개월 기준
+    }
+    
+    return 0;
+  }
+
+  private extractWindDirection(data: any[]): string {
+    const windDirData = data.find(item => item['자료구분코드'] === 'VEC');
+    if (windDirData && windDirData['예보 값']) {
+      const degree = parseFloat(windDirData['예보 값']);
+      if (degree >= 0 && degree < 45) return 'N';
+      if (degree >= 45 && degree < 90) return 'NE';
+      if (degree >= 90 && degree < 135) return 'E';
+      if (degree >= 135 && degree < 180) return 'SE';
+      if (degree >= 180 && degree < 225) return 'S';
+      if (degree >= 225 && degree < 270) return 'SW';
+      if (degree >= 270 && degree < 315) return 'W';
+      if (degree >= 315 && degree < 360) return 'NW';
+    }
+    return '';
+  }
+
+  private extractPrecipitation(data: any[]): number {
+    const precipData = data.find(item => item['자료구분코드'] === 'PCP');
+    return precipData ? parseFloat(precipData['예보 값'] || '0') : 0;
+  }
+
+  private extractVisibility(data: any[]): number {
+    const visData = data.find(item => item['자료구분코드'] === 'VIS');
+    return visData ? parseFloat(visData['예보 값'] || '0') : 0;
   }
 
   private groupWeatherByLocation(data: any[]): Record<string, any[]> {
@@ -512,17 +531,17 @@ class ApiClient {
 
   private extractTemperature(data: any[]): number {
     const tempData = data.find(item => item['자료구분코드'] === 'TMP');
-    return tempData ? parseFloat(tempData['예보 값'] || '20') : 20;
+    return tempData ? parseFloat(tempData['예보 값'] || '0') : 0;
   }
 
   private extractHumidity(data: any[]): number {
     const humData = data.find(item => item['자료구분코드'] === 'REH');
-    return humData ? parseFloat(humData['예보 값'] || '60') : 60;
+    return humData ? parseFloat(humData['예보 값'] || '0') : 0;
   }
 
   private extractWindSpeed(data: any[]): number {
     const windData = data.find(item => item['자료구분코드'] === 'VVV');
-    return windData ? parseFloat(windData['예보 값'] || '3') : 3;
+    return windData ? parseFloat(windData['예보 값'] || '0') : 0;
   }
 
 

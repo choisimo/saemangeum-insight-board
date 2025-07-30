@@ -25,31 +25,40 @@ export const useRenewableStore = create<RenewableStore>()(
         try {
           const rawData = await dataService.getRenewableEnergyData();
           
-          // 데이터 변환 및 정규화
-          const transformedData: RenewableData[] = rawData.map((item, index) => ({
-            id: `renewable-${index}`,
-            region: item.region || '새만금',
-            type: (item.type as RenewableData['type']) || 'solar',
-            capacity: item.capacity || 0,
-            status: (item.status as RenewableData['status']) || 'operational',
-            operator: item.operator || '알 수 없음',
-            installDate: item.installDate
-          }));
+          // API에서 실제 데이터가 반환된 경우에만 처리
+          if (rawData && rawData.length > 0) {
+            // 데이터를 그대로 사용 (필터링만 적용)
+            const transformedData: RenewableData[] = rawData.filter(item => 
+              item.region && item.type && item.capacity > 0
+            );
 
-          set(
-            {
-              data: transformedData,
-              loading: false,
-              lastUpdated: new Date(),
-              error: null
-            },
-            false,
-            'renewable/fetchData/success'
-          );
+            set(
+              {
+                data: transformedData,
+                loading: false,
+                lastUpdated: new Date(),
+                error: null
+              },
+              false,
+              'renewable/fetchData/success'
+            );
+          } else {
+            // 데이터가 없는 경우 빈 배열과 에러 메시지 설정
+            set(
+              {
+                data: [],
+                loading: false,
+                error: 'API에서 재생에너지 데이터를 가져올 수 없습니다'
+              },
+              false,
+              'renewable/fetchData/empty'
+            );
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '재생에너지 데이터 로딩 실패';
           set(
             {
+              data: [], // 에러 시 빈 배열만 설정
               loading: false,
               error: errorMessage
             },

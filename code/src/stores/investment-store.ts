@@ -25,33 +25,40 @@ export const useInvestmentStore = create<InvestmentStore>()(
         try {
           const rawData = await dataService.getInvestmentData();
           
-          // 데이터 변환 및 정규화
-          const transformedData: InvestmentData[] = rawData.map((item, index) => ({
-            id: `inv-${index}`,
-            company: item.company || `기업 ${index + 1}`,
-            sector: item.sector || '기타',
-            investment: item.investment || 0,
-            expectedJobs: item.expectedJobs || 0,
-            progress: item.progress || 0,
-            location: item.location || '새만금',
-            startDate: item.startDate || new Date().toISOString().split('T')[0],
-            status: (item.status as InvestmentData['status']) || 'in-progress'
-          }));
+          // API에서 실제 데이터가 반환된 경우에만 처리
+          if (rawData && rawData.length > 0) {
+            // 데이터를 그대로 사용 (필터링만 적용)
+            const transformedData: InvestmentData[] = rawData.filter(item => 
+              item.company && item.sector && item.investment > 0
+            );
 
-          set(
-            {
-              data: transformedData,
-              loading: false,
-              lastUpdated: new Date(),
-              error: null
-            },
-            false,
-            'investment/fetchData/success'
-          );
+            set(
+              {
+                data: transformedData,
+                loading: false,
+                lastUpdated: new Date(),
+                error: null
+              },
+              false,
+              'investment/fetchData/success'
+            );
+          } else {
+            // 데이터가 없는 경우 빈 배열과 에러 메시지 설정
+            set(
+              {
+                data: [],
+                loading: false,
+                error: 'API에서 투자 데이터를 가져올 수 없습니다'
+              },
+              false,
+              'investment/fetchData/empty'
+            );
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '투자 데이터 로딩 실패';
           set(
             {
+              data: [], // 에러 시 빈 배열만 설정
               loading: false,
               error: errorMessage
             },
