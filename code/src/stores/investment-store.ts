@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { InvestmentStore, InvestmentData } from '../types/dashboard';
-import { dataService } from '../services/data-service';
+import { dataService } from '../lib/data-service';
 
 /**
  * 투자 데이터 전역 상태 관리 스토어
@@ -27,10 +27,8 @@ export const useInvestmentStore = create<InvestmentStore>()(
           
           // API에서 실제 데이터가 반환된 경우에만 처리
           if (rawData && rawData.length > 0) {
-            // 데이터를 그대로 사용 (필터링만 적용)
-            const transformedData: InvestmentData[] = rawData.filter(item => 
-              item.company && item.sector && item.investment > 0
-            );
+            // 실제 데이터만 사용 (필터링 제거)
+            const transformedData: InvestmentData[] = rawData;
 
             set(
               {

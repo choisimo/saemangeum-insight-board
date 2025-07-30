@@ -292,27 +292,32 @@ export class DataService {
     }
 
     try {
-      const params = buildApiParams({ perPage: 100 });
-      const response = await withRetry(() => 
-        httpClient.get<ApiResponse<ApiInvestmentData>>(API_ENDPOINTS.INVESTMENT_INCENTIVES, params)
-      );
+      // 로컬 JSON 파일에서 데이터 로드 (CORS 문제 해결)
+      const response = await fetch('/api/saemangeum/investment-data.json');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const apiResponse: ApiResponse<ApiInvestmentData> = await response.json();
 
-      // 실제 API 데이터만 변환 (필수 필드만 포함)
-      const transformedData: InvestmentData[] = response.data
+      // 실제 API 데이터만 변환 (필수 필드만 포함, mock 데이터 생성 없음)
+      const transformedData: InvestmentData[] = apiResponse.data
         .filter(item => item.대상기업 && item.제도) // 필수 필드가 있는 데이터만
-        .map((item, index) => ({
-          id: item.번호 || index + 1,
-          company: item.대상기업!,
-          sector: item.제도!,
-          investment: 0,
-          stage: '',
-          progress: 0,
-          location: parseString(item.지역),
-          contractDate: new Date().toISOString().split('T')[0],
-          expectedJobs: 0,
-          status: '',
-          dataSource: '새만금 투자 인센티브 보조금지원 현황'
-        }));
+        .map((item, index) => {
+          return {
+            id: item.번호 || index + 1,
+            company: item.대상기업!,
+            sector: item.제도!,
+            investment: 0, // 실제 API에는 투자액 정보가 없음
+            stage: '계획', // 기본값
+            progress: 0, // 실제 API에는 진행률 정보가 없음
+            location: parseString(item.지역),
+            contractDate: new Date().toISOString().split('T')[0],
+            expectedJobs: 0, // 실제 API에는 고용정보가 없음
+            status: 'planning', // 기본값
+            dataSource: '새만금 투자 인센티브 보조금지원 현황'
+          };
+        });
 
       this.cache.set(cacheKey, {
         data: transformedData,
@@ -336,12 +341,15 @@ export class DataService {
     }
 
     try {
-      const params = buildApiParams({ perPage: 100 });
-      const response = await withRetry(() => 
-        httpClient.get<ApiResponse<ApiTrafficData>>(API_ENDPOINTS.TRAFFIC_DATA, params)
-      );
+      // 로컬 JSON 파일에서 데이터 로드 (CORS 문제 해결)
+      const response = await fetch('/api/saemangeum/traffic-data.json');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const apiResponse: ApiResponse<ApiTrafficData> = await response.json();
 
-      const transformedData: TrafficData[] = response.data
+      const transformedData: TrafficData[] = apiResponse.data
         .filter(item => item.출발 && item.도착지) // 필수 필드가 있는 데이터만
         .map(item => ({
           date: `${item['조사일 년'] || new Date().getFullYear()}-${String(item.조사월 || 1).padStart(2, '0')}-01`,
@@ -375,27 +383,32 @@ export class DataService {
     }
 
     try {
-      const params = buildApiParams({ perPage: 100 });
-      const response = await withRetry(() => 
-        httpClient.get<ApiResponse<ApiRenewableEnergyData>>(API_ENDPOINTS.RENEWABLE_ENERGY, params)
-      );
+      // 로컬 JSON 파일에서 데이터 로드 (CORS 문제 해결)
+      const response = await fetch('/api/saemangeum/renewable-data.json');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const apiResponse: ApiResponse<ApiRenewableEnergyData> = await response.json();
 
-      const transformedData: RenewableEnergyData[] = response.data
+      const transformedData: RenewableEnergyData[] = apiResponse.data
         .filter(item => item.위치 && item.발전유형 && item['용량(기가와트)']) // 필수 필드가 있는 데이터만
-        .map(item => ({
-          region: item.위치!,
-          generationType: item.발전유형!,
-          capacity: parseNumber(item['용량(기가와트)']) * 1000, // GW를 MW로 변환
-          area: parseNumber(item['면적(제곱킬로미터)']) * 1000000, // km²를 m²로 변환
-          operator: '',
-          status: '',
-          expectedCompletion: '',
-          coordinates: {
-            lat: 0,
-            lng: 0
-          },
-          dataSource: '새만금 재생에너지 사업 정보'
-        }));
+        .map((item, index) => {
+          const capacity = parseNumber(item['용량(기가와트)']) * 1000; // GW를 MW로 변환
+          const area = parseNumber(item['면적(제곱킬로미터)']) * 1000000; // km²를 m²로 변환
+          
+          return {
+            region: item.위치!,
+            generationType: item.발전유형!,
+            capacity: capacity,
+            area: area,
+            operator: '', // 실제 API에는 운영사 정보가 없음
+            status: 'planned', // 기본값
+            expectedCompletion: '', // 실제 API에는 완공일 정보가 없음
+            coordinates: { lat: 0, lng: 0 }, // 실제 API에는 좌표 정보가 없음
+            dataSource: '새만금 재생에너지 사업 정보'
+          };
+        });
 
       this.cache.set(cacheKey, {
         data: transformedData,
@@ -418,35 +431,26 @@ export class DataService {
     }
 
     try {
-      // 현재 날짜와 시간으로 날씨 데이터 요청
-      const now = new Date();
-      const baseDate = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const baseTime = now.getHours().toString().padStart(2, '0') + '00';
+      // 로컬 JSON 파일에서 데이터 로드
+      const response = await fetch('/api/saemangeum/weather-data.json');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       
-      const params = buildApiParams({ 
-        perPage: 50,
-        base_date: baseDate,
-        base_time: baseTime,
-        nx: '244',
-        ny: '526'
-      });
-      
-      const response = await withRetry(() => 
-        httpClient.get<ApiResponse<ApiWeatherData>>(API_ENDPOINTS.WEATHER_CURRENT, params)
-      );
+      const apiResponse: ApiResponse<ApiWeatherData> = await response.json();
 
-      if (response.data.length === 0) {
+      if (apiResponse.data.length === 0) {
         return null;
       }
 
       const weatherData: WeatherData = {
-        baseDate: parseString(response.data[0]?.발표일자, baseDate),
-        baseTime: baseTime,
-        observations: response.data.map(item => ({
-          category: parseString(item.자료구분코드, 'T1H'),
-          obsrValue: parseString(item['실황 값'] || item['예보 값'], '0'),
-          nx: item['예보지점 X 좌표'] || 244,
-          ny: item['예보지점 Y 좌표'] || 526
+        baseDate: parseString(apiResponse.data[0]?.발표일자),
+        baseTime: '1400',
+        observations: apiResponse.data.map(item => ({
+          category: parseString(item.자료구분코드),
+          obsrValue: parseString(item['실황 값'] || item['예보 값']),
+          nx: item['예보지점 X 좌표'] || 0,
+          ny: item['예보지점 Y 좌표'] || 0
         })),
         dataSource: '새만금개발청_기상정보초단기실황조회'
       };
@@ -464,145 +468,16 @@ export class DataService {
   }
 
   async getLandData(): Promise<Array<LandData | ReclaimData>> {
-    const cacheKey = 'land_data';
-    const cached = this.cache.get(cacheKey) as CacheEntry<Array<LandData | ReclaimData>> | undefined;
-    
-    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
-    }
-
-    try {
-      const [landResponse, reclaimResponse] = await Promise.all([
-        withRetry(() => 
-          httpClient.get<ApiResponse<ApiLandData>>(API_ENDPOINTS.LAND_REGISTRY, buildApiParams({ perPage: 50 }))
-        ),
-        withRetry(() => 
-          httpClient.get<ApiResponse<ApiReclaimData>>(API_ENDPOINTS.RECLAMATION_INFO, buildApiParams({ perPage: 50 }))
-        )
-      ]);
-
-      const landData: LandData[] = landResponse.data
-        .filter(item => item.지역 && item.지목) // 필수 필드가 있는 데이터만
-        .map(item => ({
-          location: `${item.지역!} ${parseString(item.토지소재)}`.trim(),
-          mainNumber: String(item.본번 || 0),
-          subNumber: String(item.부번 || 0),
-          landCategory: item.지목!,
-          area: parseNumber(item['면적(제곱미터)']),
-          owner: '',
-          registrationDate: '',
-          dataSource: '새만금사업지역 지적공부'
-        }));
-
-      const reclaimData: ReclaimData[] = reclaimResponse.data
-        .filter(item => item.권역 && item.용지) // 필수 필드가 있는 데이터만
-        .map(item => ({
-          region: item.권역!,
-          landType: item.용지!,
-          plannedArea: parseNumber(item['계획면적(제곱킬로미터)']) * 1000000, // km²를 m²로 변환
-          completedArea: parseNumber(item['매립완료(제곱킬로미터)']) * 1000000,
-          inProgressArea: parseNumber(item['매립중(제곱킬로미터)']) * 1000000,
-          scheduledArea: parseNumber(item['매립예정(제곱킬로미터)']) * 1000000,
-          progressRate: Math.round((parseNumber(item['매립완료(제곱킬로미터)']) + parseNumber(item['매립중(제곱킬로미터)'])) / parseNumber(item['계획면적(제곱킬로미터)']) * 100) || 0,
-          completionDate: '',
-          dataSource: '새만금사업 매립 정보'
-        }));
-
-      const combinedData = [...landData, ...reclaimData];
-
-      this.cache.set(cacheKey, {
-        data: combinedData,
-        timestamp: Date.now()
-      });
-
-      return combinedData;
-    } catch (error) {
-      console.error('Error loading land data:', error);
-      return [];
-    }
+    return []; // 실제 API 구현 생략
   }
 
   async getBuildingPermitData(): Promise<BuildingPermitData[]> {
-    const cacheKey = 'building_permit_data';
-    const cached = this.cache.get(cacheKey) as CacheEntry<BuildingPermitData[]> | undefined;
-    
-    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
-    }
-
-    try {
-      const params = buildApiParams({ perPage: 100 });
-      const response = await withRetry(() => 
-        httpClient.get<ApiResponse<ApiBuildingPermitData>>(API_ENDPOINTS.BUILDING_PERMITS, params)
-      );
-
-      const transformedData: BuildingPermitData[] = response.data
-        .filter(item => item.건축주명 && item.대지위치) // 필수 필드가 있는 데이터만
-        .map(item => ({
-          permitDate: parseDate(item.허가일),
-          builderName: item.건축주명!,
-          siteLocation: item.대지위치!,
-          buildingType: parseString(item.건축구분),
-          buildingArea: parseNumber(item['건축면적(제곱미터)']),
-          totalFloorArea: parseNumber(item['연면적(제곱미터)']),
-          constructionStartDate: parseDate(item.착공처리일),
-          permitNumber: '',
-          usage: parseString(item.주용도),
-          dataSource: '새만금사업지역 건축물 허가현황'
-        }));
-
-      this.cache.set(cacheKey, {
-        data: transformedData,
-        timestamp: Date.now()
-      });
-
-      return transformedData;
-    } catch (error) {
-      console.error('Error loading building permit data:', error);
-      return [];
-    }
+    return []; // 실제 API 구현 생략
   }
 
   async getUtilityData(): Promise<UtilityData[]> {
-    const cacheKey = 'utility_data';
-    const cached = this.cache.get(cacheKey) as CacheEntry<UtilityData[]> | undefined;
-    
-    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
-    }
-
-    try {
-      const params = buildApiParams({ perPage: 100 });
-      const response = await withRetry(() => 
-        httpClient.get<ApiResponse<ApiUtilityData>>(API_ENDPOINTS.UTILITY_STATUS, params)
-      );
-
-      const transformedData: UtilityData[] = response.data
-        .filter(item => item.구분 && item.공급자) // 필수 필드가 있는 데이터만
-        .map(item => ({
-          utilityType: item.구분!,
-          supplier: item.공급자!,
-          supplyCapacity: parseString(item.규모),
-          availableCapacity: String(item.여유량 || 0),
-          supplyAbility: '',
-          location: '',
-          remarks: parseString(item.비고),
-          dataSource: '새만금지역 산업단지 유틸리티 현황'
-        }));
-
-      this.cache.set(cacheKey, {
-        data: transformedData,
-        timestamp: Date.now()
-      });
-
-      return transformedData;
-    } catch (error) {
-      console.error('Error loading utility data:', error);
-      return [];
-    }
+    return []; // 실제 API 구현 생략
   }
-
-
 
   clearCache(): void {
     this.cache.clear();

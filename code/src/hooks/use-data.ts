@@ -1,5 +1,5 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { dataService } from '@/services/data-service';
+import { dataService } from '@/lib/data-service';
 import type { 
   InvestmentData, 
   RenewableEnergyData, 
@@ -10,7 +10,7 @@ import type {
   BuildingPermitData,
   UtilityData,
   DataResponse
-} from '@/services/data-service';
+} from '@/lib/data-service';
 
 // React Query 설정
 const QUERY_OPTIONS = {

@@ -2,7 +2,7 @@
  * KPI 계산 유틸리티 함수들
  */
 
-import type { InvestmentData, RenewableEnergyData } from '@/services/data-service';
+import type { InvestmentData, RenewableEnergyData } from '@/lib/data-service';
 import type { KPIData, ChangeType } from '@/types/dashboard';
 import { KPI_CONSTANTS, BUSINESS_SECTORS } from '@/constants/dashboard';
 
@@ -16,23 +16,25 @@ export const getChangeType = (change: number): ChangeType => {
 };
 
 /**
- * 투자액에서 숫자 추출
+ * 투자액에서 숫자 추출 (실제 데이터만 사용, 생성하지 않음)
  */
 export const extractInvestmentAmount = (investment: string, index: number): number => {
-  if (!investment) return (index + 1) * 2.5; // 인덱스 기반 일관된 값
+  if (!investment) return 0; // 데이터가 없으면 0 반환
   
   const match = investment.match(/(\d+(?:\.\d+)?)/);
   if (match) {
     return parseFloat(match[1]);
   }
   
-  return (index + 1) * 2.5; // 폴백값
+  return 0; // 추출할 수 없으면 0 반환
 };
 
 /**
- * 고용 창출 계산
+ * 고용 창출 계산 (실제 데이터가 있는 경우만 계산)
  */
 export const calculateEmployment = (investmentAmount: number): number => {
+  if (investmentAmount === 0) return 0; // 투자액이 0이면 고용도 0
+  
   return Math.floor(
     (investmentAmount / KPI_CONSTANTS.INVESTMENT_UNIT) * 
     KPI_CONSTANTS.EMPLOYMENT_PER_INVESTMENT + 
@@ -41,13 +43,10 @@ export const calculateEmployment = (investmentAmount: number): number => {
 };
 
 /**
- * 진행률 계산 (인덱스 기반)
+ * 진행률 계산 (실제 데이터만 사용)
  */
 export const calculateProgress = (index: number): number => {
-  return Math.min(
-    KPI_CONSTANTS.PROGRESS_MAX,
-    index * KPI_CONSTANTS.PROGRESS_INCREMENT + KPI_CONSTANTS.PROGRESS_BASE
-  );
+  return 0; // 실제 API에는 진행률 정보가 없으므로 0 반환
 };
 
 /**
@@ -70,7 +69,7 @@ export const calculateTotalRenewableCapacity = (renewableData: RenewableEnergyDa
 };
 
 /**
- * 투자 데이터 집계
+ * 투자 데이터 집계 (실제 데이터만 사용)
  */
 export const aggregateInvestmentData = (investmentData: InvestmentData[]) => {
   let totalInvestment = 0;
@@ -78,14 +77,13 @@ export const aggregateInvestmentData = (investmentData: InvestmentData[]) => {
   let actualInvestment = 0;
   
   investmentData.forEach((item, index) => {
-    const investmentStr = typeof item.investment === 'string' ? item.investment : String(item.investment || '');
-    const amount = extractInvestmentAmount(investmentStr, index);
-    const progress = calculateProgress(index);
-    const employment = calculateEmployment(amount);
+    // investment 필드가 실제로는 0이므로 실제 집계는 0
+    const amount = typeof item.investment === 'number' ? item.investment : 0;
+    const employment = typeof item.expectedJobs === 'number' ? item.expectedJobs : 0;
     
     totalInvestment += amount;
     totalEmployment += employment;
-    actualInvestment += amount * progress;
+    actualInvestment += amount * (item.progress || 0);
   });
   
   return {

@@ -1,5 +1,5 @@
-import type { InvestmentData, RenewableEnergyData, WeatherData } from './data-service';
-import { dataService } from './data-service';
+import type { InvestmentData, RenewableEnergyData, WeatherData } from '../lib/data-service';
+import { dataService } from '../lib/data-service';
 
 export interface AlertData {
   id: string;

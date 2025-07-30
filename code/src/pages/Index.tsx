@@ -464,8 +464,7 @@ const Index: React.FC = () => {
             />
           </div>
         );
-      case "alerts":
-        return <AlertCenter />;
+
       default:
         return null;
     }

@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useInvestmentData, useDatasets } from "@/hooks/use-data";
-import type { InvestmentData } from "@/services/data-service";
+import type { InvestmentData } from "@/lib/data-service";
 import { 
   Building2, 
   TrendingUp, 

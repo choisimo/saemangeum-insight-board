@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { RenewableStore, RenewableData } from '../types/dashboard';
-import { dataService } from '../services/data-service';
+import { dataService } from '../lib/data-service';
 
 /**
  * 재생에너지 데이터 전역 상태 관리 스토어

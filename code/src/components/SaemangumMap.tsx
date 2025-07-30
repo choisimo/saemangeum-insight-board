@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInvestmentData, useInvestmentLoading } from "@/stores";
 import { useDatasets, useLandData } from "@/hooks/use-data";
-import type { InvestmentData, LandData, ReclaimData } from "@/services/data-service";
+import type { InvestmentData, LandData, ReclaimData } from "@/lib/data-service";
 import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2, MapPin } from "lucide-react";
 import { KakaoMap } from "@/components/KakaoMap";
 import { DataSourceInfo } from "@/components/DataSourceInfo";
