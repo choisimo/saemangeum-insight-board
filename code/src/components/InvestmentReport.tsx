@@ -67,7 +67,7 @@ export function InvestmentReport() {
   const totalCompanies = investmentData.length;
   const totalInvestment = investmentData.reduce((sum: number, item: InvestmentData) => sum + item.investment, 0);
   const averageProgress = investmentData.length > 0 
-    ? Math.round(investmentData.reduce((sum: number, item: InvestmentData) => sum + item.progress, 0) / investmentData.length * 10) / 10
+    ? Number((investmentData.reduce((sum: number, item: InvestmentData) => sum + item.progress, 0) / investmentData.length * 100).toFixed(2))
     : 0;
   const totalExpectedJobs = investmentData.reduce((sum: number, item: InvestmentData) => sum + item.expectedJobs, 0);
 

@@ -94,7 +94,7 @@ export const InvestmentOverview: React.FC<InvestmentOverviewProps> = ({ data }) 
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(avgProgress * 100)}%</div>
+            <div className="text-2xl font-bold">{(avgProgress * 100).toFixed(2)}%</div>
             <Progress value={avgProgress * 100} className="mt-2" />
           </CardContent>
         </Card>
@@ -181,7 +181,7 @@ export const InvestmentOverview: React.FC<InvestmentOverviewProps> = ({ data }) 
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span>진행률</span>
-                        <span>{Math.round(project.progress * 100)}%</span>
+                        <span>{(project.progress * 100).toFixed(2)}%</span>
                       </div>
                       <Progress value={project.progress * 100} className="h-2" />
                     </div>

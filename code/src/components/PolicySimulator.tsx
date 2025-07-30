@@ -76,7 +76,7 @@ export function PolicySimulator() {
       carbonReduction: Math.round(baseCarbon * incentiveMultiplier * 1.2),
       taxBenefit: Math.round(baseInvestment * corporateTaxReduction[0] * 0.08),
       governmentCost: Math.round(baseInvestment * (rentalDiscount[0] * 0.05 + re100Incentive[0] * 0.06)),
-      roi: Math.round(((baseInvestment * taxMultiplier * rentalMultiplier) / (baseInvestment + (baseInvestment * (rentalDiscount[0] * 0.05 + re100Incentive[0] * 0.06)))) * 100)
+      roi: Number((((baseInvestment * taxMultiplier * rentalMultiplier) / (baseInvestment + (baseInvestment * (rentalDiscount[0] * 0.05 + re100Incentive[0] * 0.06)))) * 100).toFixed(2))
     };
   };
 

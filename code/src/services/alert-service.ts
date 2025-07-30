@@ -112,7 +112,7 @@ export class AlertService {
         this.addAlert({
           type: 'warning',
           title: '투자 프로젝트 진행 지연',
-          message: `${investment.company} (${investment.sector}) - 예상 진행률 대비 ${Math.round((expectedProgress - actualProgress) * 100)}% 지연`,
+          message: `${investment.company} (${investment.sector}) - 예상 진행률 대비 ${((expectedProgress - actualProgress) * 100).toFixed(2)}% 지연`,
           source: 'investment_analysis',
           severity: actualProgress < expectedProgress - 0.3 ? 'high' : 'medium',
           category: 'investment',
