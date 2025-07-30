@@ -291,13 +291,13 @@ function getReliabilityColor(reliability: string) {
 
 function getDataSourceUrl(dataSourceId: string): string {
   const urlMapping: Record<string, string> = {
-    investment: 'https://www.data.go.kr/data/15121622/openapi.do',
-    renewable: 'https://www.data.go.kr/data/15068848/openapi.do', 
-    weather: 'https://www.data.go.kr/data/15138305/openapi.do',
-    utility: 'https://www.data.go.kr/data/15068849/openapi.do',
-    building: 'https://www.data.go.kr/data/15068850/openapi.do',
-    traffic: 'https://www.data.go.kr/data/15068851/openapi.do',
-    land: 'https://www.data.go.kr/data/15068852/openapi.do'
+    investment: 'https://www.data.go.kr/data/15095330/fileData.do',
+    renewable: 'https://www.data.go.kr/data/15095328/fileData.do', 
+    weather: 'https://www.data.go.kr/data/15095326/fileData.do',
+    utility: 'https://www.data.go.kr/data/15095331/fileData.do',
+    building: 'https://www.data.go.kr/data/15095332/fileData.do',
+    traffic: 'https://www.data.go.kr/data/15095327/fileData.do',
+    land: 'https://www.data.go.kr/data/15095329/fileData.do'
   };
   
   return urlMapping[dataSourceId] || 'https://www.data.go.kr';
