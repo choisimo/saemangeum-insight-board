@@ -4,14 +4,40 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, BarChart3, TrendingUp, RefreshCw } from "lucide-react";
-import { useInvestmentData, useRenewableEnergyData } from "@/hooks/use-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calculator, BarChart3, TrendingUp, RefreshCw, Download, Save, Copy, Target, Building2, Zap, Users } from "lucide-react";
+import { useInvestmentData, useRenewableData } from "@/stores";
+import { useRenewableEnergyData } from "@/hooks/use-data";
+import { formatPercentage, formatChangeRate } from '@/utils/formatters';
 
 interface SimulationResult {
   investmentAttraction: number;
   employmentCreation: number;
   gdpContribution: number;
   carbonReduction: number;
+  taxBenefit: number;
+  governmentCost: number;
+  roi: number;
+}
+
+interface Scenario {
+  id: string;
+  name: string;
+  corporateTaxReduction: number;
+  rentalDiscount: number;
+  re100Incentive: number;
+  subsidyAmount: number;
+  results: SimulationResult;
+}
+
+interface InvestmentSimulationInputs {
+  industry: string;
+  investmentAmount: number;
+  employmentCount: number;
+  landArea: number;
 }
 
 export function PolicySimulator() {
@@ -19,7 +45,7 @@ export function PolicySimulator() {
   const [rentalDiscount, setRentalDiscount] = useState([20]);
   const [re100Incentive, setRe100Incentive] = useState([10]);
   
-  const { data: investmentData = [] } = useInvestmentData();
+  const investmentData = useInvestmentData() || [];
   const { data: renewableData = [] } = useRenewableEnergyData();
 
   // 정책 시뮬레이션 계산 로직
@@ -47,7 +73,10 @@ export function PolicySimulator() {
       investmentAttraction: Math.round(baseInvestment * taxMultiplier * rentalMultiplier),
       employmentCreation: Math.round(baseEmployment * taxMultiplier * 0.8),
       gdpContribution: Math.round(baseGDP * taxMultiplier * rentalMultiplier * 0.9),
-      carbonReduction: Math.round(baseCarbon * incentiveMultiplier * 1.2)
+      carbonReduction: Math.round(baseCarbon * incentiveMultiplier * 1.2),
+      taxBenefit: Math.round(baseInvestment * corporateTaxReduction[0] * 0.08),
+      governmentCost: Math.round(baseInvestment * (rentalDiscount[0] * 0.05 + re100Incentive[0] * 0.06)),
+      roi: Math.round(((baseInvestment * taxMultiplier * rentalMultiplier) / (baseInvestment + (baseInvestment * (rentalDiscount[0] * 0.05 + re100Incentive[0] * 0.06)))) * 100)
     };
   };
 
@@ -99,7 +128,7 @@ export function PolicySimulator() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium">법인세 감면율</label>
-                  <Badge variant="outline">{corporateTaxReduction[0]}%</Badge>
+                  <Badge variant="outline">{corporateTaxReduction[0].toFixed(2)}%</Badge>
                 </div>
                 <Slider
                   value={corporateTaxReduction}
@@ -119,7 +148,7 @@ export function PolicySimulator() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium">장기임대료 할인율</label>
-                  <Badge variant="outline">{rentalDiscount[0]}%</Badge>
+                  <Badge variant="outline">{rentalDiscount[0].toFixed(2)}%</Badge>
                 </div>
                 <Slider
                   value={rentalDiscount}
@@ -139,7 +168,7 @@ export function PolicySimulator() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium">RE100 인센티브 수준</label>
-                  <Badge variant="outline">{re100Incentive[0]}%</Badge>
+                  <Badge variant="outline">{re100Incentive[0].toFixed(2)}%</Badge>
                 </div>
                 <Slider
                   value={re100Incentive}
@@ -178,7 +207,7 @@ export function PolicySimulator() {
                   {results.investmentAttraction.toLocaleString()}억원
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  기준 대비 +{((results.investmentAttraction - baseline.investmentAttraction) / baseline.investmentAttraction * 100).toFixed(1)}%
+                  기준 대비 {formatChangeRate((results.investmentAttraction - baseline.investmentAttraction) / baseline.investmentAttraction)}
                 </div>
               </Card>
 
@@ -192,7 +221,7 @@ export function PolicySimulator() {
                   {results.employmentCreation.toLocaleString()}명
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  기준 대비 +{((results.employmentCreation - baseline.employmentCreation) / baseline.employmentCreation * 100).toFixed(1)}%
+                  기준 대비 {formatChangeRate((results.employmentCreation - baseline.employmentCreation) / baseline.employmentCreation)}
                 </div>
               </Card>
 
@@ -206,7 +235,7 @@ export function PolicySimulator() {
                   {results.gdpContribution.toLocaleString()}억원
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  기준 대비 +{((results.gdpContribution - baseline.gdpContribution) / baseline.gdpContribution * 100).toFixed(1)}%
+                  기준 대비 {formatChangeRate((results.gdpContribution - baseline.gdpContribution) / baseline.gdpContribution)}
                 </div>
               </Card>
 
@@ -220,7 +249,7 @@ export function PolicySimulator() {
                   {results.carbonReduction.toLocaleString()}톤
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  기준 대비 +{((results.carbonReduction - baseline.carbonReduction) / baseline.carbonReduction * 100).toFixed(1)}%
+                  기준 대비 {formatChangeRate((results.carbonReduction - baseline.carbonReduction) / baseline.carbonReduction)}
                 </div>
               </Card>
             </div>

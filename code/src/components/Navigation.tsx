@@ -3,14 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   BarChart3, 
-  Calculator, 
-  Map, 
   Bell, 
   Settings, 
   User,
   Menu,
   X,
-  Building2
+  FileText,
+  Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SettingsDialog } from "./SettingsDialog";
@@ -21,19 +20,40 @@ interface NavigationProps {
   onTabChange: (tab: string) => void;
 }
 
+// 핵심 메인 페이지만 상단 네비게이션에 포함
 const navigationItems = [
-  { id: "dashboard", label: "대시보드", icon: BarChart3 },
-  { id: "simulator", label: "정책시뮬레이션", icon: Calculator },
-  { id: "map", label: "공간정보", icon: Map },
-  { id: "investment", label: "투자유치보고서", icon: Building2 },
-  { id: "alerts", label: "알림", icon: Bell },
+  { id: "dashboard", label: "대시보드", icon: BarChart3, description: "종합 현황 및 KPI" },
+  { id: "reports", label: "보고서", icon: FileText, description: "상세 분석 보고서" },
+  { id: "monitoring", label: "모니터링", icon: Activity, description: "실시간 모니터링" },
+  { id: "alerts", label: "알림", icon: Bell, description: "시스템 알림" },
 ];
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { hasUnreadAlerts, hasCriticalAlerts, totalCount } = useAlertStatus();
+
+  // 네비게이션 핸들러 - 세부 기능들을 적절한 탭으로 매핑
+  const handleNavigation = (itemId: string) => {
+    switch (itemId) {
+      case 'dashboard':
+        onTabChange('dashboard');
+        break;
+      case 'reports':
+        // 보고서 섹션 - 투자유치보고서를 기본으로
+        onTabChange('investment');
+        break;
+      case 'monitoring':
+        // 모니터링 섹션 - 모니터링 탭으로 직접 이동
+        onTabChange('monitoring');
+        break;
+      case 'alerts':
+        onTabChange('alerts');
+        break;
+      default:
+        onTabChange(itemId);
+    }
+  };
 
   return (
     <>
@@ -51,19 +71,24 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             </div>
           </div>
 
-          {/* 메인 네비게이션 */}
+          {/* 메인 네비게이션 - 핵심 기능만 */}
           <div className="flex items-center space-x-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
+              const isActive = activeTab === item.id || 
+                (item.id === 'reports' && ['investment', 'environment'].includes(activeTab)) ||
+                (item.id === 'monitoring' && ['monitoring', 'map', 'simulator'].includes(activeTab));
+              
               return (
                 <Button
                   key={item.id}
-                  variant={activeTab === item.id ? "default" : "ghost"}
-                  onClick={() => onTabChange(item.id)}
+                  variant={isActive ? "default" : "ghost"}
+                  onClick={() => handleNavigation(item.id)}
                   className={cn(
-                    "flex items-center space-x-2",
-                    activeTab === item.id && "bg-primary text-primary-foreground"
+                    "flex items-center space-x-2 relative",
+                    isActive && "bg-primary text-primary-foreground"
                   )}
+                  title={item.description}
                 >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
@@ -103,7 +128,6 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             variant="ghost" 
             size="sm"
             onClick={() => {
-              setIsUserMenuOpen(true);
               // TODO: 사용자 프로필 메뉴 구현
               alert('사용자 프로필 기능이 곧 추가될 예정입니다.');
             }}
@@ -153,18 +177,24 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           <div className="bg-card border-b border-border p-4 space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
+              const isActive = activeTab === item.id || 
+                (item.id === 'reports' && ['investment', 'environment'].includes(activeTab)) ||
+                (item.id === 'monitoring' && ['monitoring', 'map', 'simulator'].includes(activeTab));
+              
               return (
                 <Button
                   key={item.id}
-                  variant={activeTab === item.id ? "default" : "ghost"}
+                  variant={isActive ? "default" : "ghost"}
                   onClick={() => {
-                    onTabChange(item.id);
+                    handleNavigation(item.id);
                     setIsMobileMenuOpen(false);
                   }}
                   className="w-full justify-start"
+                  title={item.description}
                 >
                   <Icon className="h-4 w-4 mr-2" />
                   <span>{item.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{item.description}</span>
                   {item.id === "alerts" && hasUnreadAlerts && (
                     <Badge 
                       variant={hasCriticalAlerts ? "destructive" : "secondary"} 

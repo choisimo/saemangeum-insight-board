@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useInvestmentData, useDatasets, useLandData } from "@/hooks/use-data";
+import { useInvestmentData, useInvestmentLoading } from "@/stores";
+import { useDatasets, useLandData } from "@/hooks/use-data";
 import type { InvestmentData, LandData, ReclaimData } from "@/services/data-service";
 import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2, MapPin } from "lucide-react";
 import { KakaoMap } from "@/components/KakaoMap";
@@ -196,7 +197,8 @@ const districts: DistrictData[] = [
 export function SaemangumMap() {
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictData | null>(null);
   const [viewMode, setViewMode] = useState<'sales' | 'companies' | 'development' | 'investment' | 'employment'>('sales');
-  const { data: investmentData, loading: investmentLoading } = useInvestmentData();
+  const investmentData = useInvestmentData();
+  const investmentLoading = useInvestmentLoading();
   const { datasets, loading: datasetsLoading } = useDatasets();
   const { data: landData, loading: landLoading } = useLandData();
 

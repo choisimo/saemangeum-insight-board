@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AlertService, { type AlertData } from '@/services/alert-service';
-import { useInvestmentData, useRenewableEnergyData, useWeatherData } from './use-data';
+import { useInvestmentData, useRenewableData } from '@/stores';
+import { useRenewableEnergyData, useWeatherData } from './use-data';
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState<AlertData[]>([]);
@@ -8,7 +9,7 @@ export function useAlerts() {
   const alertService = AlertService.getInstance();
 
   // 데이터 훅들
-  const { data: investmentData } = useInvestmentData();
+  const investmentData = useInvestmentData();
   const { data: renewableData } = useRenewableEnergyData();
   const { data: weatherData } = useWeatherData();
 

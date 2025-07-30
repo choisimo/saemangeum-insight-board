@@ -15,6 +15,7 @@ interface KPICardProps {
   className?: string;
   actualValue?: number; // 실제 진행된 값
   remainingValue?: number; // 남은 값
+  isClickable?: boolean; // 클릭 가능 여부
 }
 
 export function KPICard({
@@ -28,7 +29,8 @@ export function KPICard({
   icon,
   className,
   actualValue,
-  remainingValue
+  remainingValue,
+  isClickable = false
 }: KPICardProps) {
   const getTrendIcon = () => {
     switch (changeType) {
@@ -54,9 +56,10 @@ export function KPICard({
 
   return (
     <Card className={cn(
-      "relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105",
+      "relative overflow-hidden transition-all duration-300",
       "bg-gradient-to-br from-card to-card/80",
       "border-l-4 border-l-primary",
+      isClickable ? "hover:shadow-lg cursor-pointer" : "hover:shadow-lg",
       className
     )}>
       <CardHeader className="pb-3">
