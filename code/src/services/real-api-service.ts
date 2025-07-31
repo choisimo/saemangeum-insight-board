@@ -9,13 +9,13 @@ const API_SERVICE_KEY = import.meta.env.VITE_API_SERVICE_KEY || '';
 const MOCK_DATA_ENABLED = import.meta.env.VITE_MOCK_DATA_ENABLED === 'true';
 const ENABLE_API_FALLBACK = import.meta.env.VITE_ENABLE_API_FALLBACK === 'true';
 
-// 실제 작동하는 공공데이터 API 엔드포인트
-const WEATHER_API_URL = import.meta.env.VITE_WEATHER_API_URL || 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst';
-const WEATHER_REALTIME_URL = import.meta.env.VITE_WEATHER_REALTIME_URL || 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
-const WEATHER_FORECAST_URL = import.meta.env.VITE_WEATHER_FORECAST_URL || 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst';
+// 실제 작동하는 공공데이터 API 엔드포인트 (HTTPS 사용)
+const WEATHER_API_URL = import.meta.env.VITE_WEATHER_API_URL || 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst';
+const WEATHER_REALTIME_URL = import.meta.env.VITE_WEATHER_REALTIME_URL || 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
+const WEATHER_FORECAST_URL = import.meta.env.VITE_WEATHER_FORECAST_URL || 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst';
 
-// 새만금개발청 API 엔드포인트 (복구 시 사용)
-const SAEMANGEUM_API_BASE = import.meta.env.VITE_SAEMANGEUM_API_BASE_URL || 'http://openapi.data.go.kr/openapi/service/rest';
+// 새만금개발청 API 엔드포인트 (복구 시 사용) - HTTPS 사용
+const SAEMANGEUM_API_BASE = import.meta.env.VITE_SAEMANGEUM_API_BASE_URL || 'https://openapi.data.go.kr/openapi/service/rest';
 const STANDARD_API_BASE = import.meta.env.VITE_STANDARD_API_BASE_URL || 'https://api.data.go.kr';
 
 // 새만금개발청 API 서비스 정보 (복구 대비)
@@ -237,8 +237,11 @@ class RealApiService {
       const baseDate = now.toISOString().slice(0, 10).replace(/-/g, '');
       const baseTime = '0500'; // 고정된 기준시간 사용
 
+      // API 키 디코딩 (URL 인코딩된 키인 경우)
+      const decodedApiKey = decodeURIComponent(API_SERVICE_KEY);
+      
       const url = new URL(WEATHER_API_URL);
-      url.searchParams.append('serviceKey', API_SERVICE_KEY);
+      url.searchParams.append('serviceKey', decodedApiKey);
       url.searchParams.append('dataType', 'JSON');
       url.searchParams.append('base_date', baseDate);
       url.searchParams.append('base_time', baseTime);
@@ -247,23 +250,41 @@ class RealApiService {
       url.searchParams.append('numOfRows', '50');
       url.searchParams.append('pageNo', '1');
 
-      console.log(`기상청 API 호출: ${url.toString()}`);
+      console.log(`기상청 API 호출 시도 - 날짜: ${baseDate}, 시간: ${baseTime}, 좌표: (${SAEMANGEUM_COORDS.nx}, ${SAEMANGEUM_COORDS.ny})`);
 
-      const response = await fetch(url.toString());
-      if (response.ok) {
-        const data = await response.json();
-        console.log('기상청 API 응답:', data);
-        
-        if (data.response?.header?.resultCode === '00') {
-          return data.response?.body?.items?.item || [];
-        } else {
-          console.warn('기상청 API 응답 코드:', data.response?.header?.resultCode, data.response?.header?.resultMsg);
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'SaemangumDashboard/1.0'
         }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('기상청 API 응답 상태:', data.response?.header);
+      
+      if (data.response?.header?.resultCode === '00') {
+        const items = data.response?.body?.items?.item || [];
+        console.log(`✅ 기상청 API 성공: ${items.length}건 데이터 수신`);
+        return items;
+      } else {
+        const errorCode = data.response?.header?.resultCode;
+        const errorMsg = data.response?.header?.resultMsg;
+        console.warn(`❌ 기상청 API 오류 - 코드: ${errorCode}, 메시지: ${errorMsg}`);
+        return null;
       }
     } catch (error) {
-      console.error('기상청 API 오류:', error);
+      console.error('❌ 기상청 API 호출 실패:', {
+        message: error instanceof Error ? error.message : '알 수 없는 오류',
+        apiKey: API_SERVICE_KEY ? `${API_SERVICE_KEY.substring(0, 10)}...` : 'undefined',
+        url: WEATHER_API_URL
+      });
+      return null;
     }
-    return null;
   }
 
   // 확장된 기상 데이터 처리 (실시간 + 예보)
@@ -381,28 +402,31 @@ class RealApiService {
     }));
   }
 
-  // 투자인센티브보조금지원현황 데이터 조회 (API 복구 대비)
   async getInvestmentData(): Promise<ProcessedInvestmentData[]> {
     try {
       console.log('새만금 투자 데이터 조회 중...');
       
-      // API 복구 시 실제 API 사용
-      if (ENABLE_API_FALLBACK && API_SERVICE_KEY) {
-        const apiData = await this.callSaemangumApi('INVESTMENT', {
-          supportYear: new Date().getFullYear().toString(),
-          supportRegion: '새만금'
-        });
-        
-        if (apiData && apiData.length > 0) {
-          console.log(`새만금개발청 투자 API에서 ${apiData.length}건 데이터 수신`);
-          return this.processInvestmentApiData(apiData);
+      try {
+        const response = await fetch('http://localhost:3001/api/investment');
+        if (response.ok) {
+          const data = await response.json();
+          // 백엔드에서 오류 응답인지 확인
+          if (data.error) {
+            console.warn('백엔드에서 오류 응답:', data.error);
+            throw new Error(data.error);
+          }
+          console.log(`✅ 백엔드에서 실제 투자 데이터 ${data.length}건 수신`);
+          return this.processInvestmentApiData(data);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
         }
+      } catch (backendError) {
+        console.warn('백엔드 투자 API 호출 실패, Mock 데이터로 폴백:', backendError);
       }
       
-      // Mock 데이터 사용
       console.log('Mock 투자 데이터 생성 중...');
       const data = this.generateRealisticInvestmentData();
-      console.log(`투자 데이터 ${data.length}건 생성 완료`);
+      console.log(`✅ 투자 데이터 ${data.length}건 생성 완료`);
       return data;
     } catch (error) {
       console.error('투자 데이터 조회 실패:', error);
@@ -415,20 +439,24 @@ class RealApiService {
     try {
       console.log('새만금 재생에너지 데이터 조회 중...');
       
-      // API 복구 시 실제 API 사용
-      if (ENABLE_API_FALLBACK && API_SERVICE_KEY) {
-        const apiData = await this.callSaemangumApi('RENEWABLE', {
-          targetRegion: '새만금',
-          generationType: ''
-        });
-        
-        if (apiData && apiData.length > 0) {
-          console.log(`새만금개발청 재생에너지 API에서 ${apiData.length}건 데이터 수신`);
-          return this.processRenewableApiData(apiData);
+      try {
+        const response = await fetch('http://localhost:3001/api/renewable');
+        if (response.ok) {
+          const data = await response.json();
+          // 백엔드에서 오류 응답인지 확인
+          if (data.error) {
+            console.warn('백엔드에서 오류 응답:', data.error);
+            throw new Error(data.error);
+          }
+          console.log(`✅ 백엔드에서 실제 재생에너지 데이터 ${data.length}건 수신`);
+          return this.processRenewableApiData(data);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
         }
+      } catch (backendError) {
+        console.warn('백엔드 재생에너지 API 호출 실패, Mock 데이터로 폴백:', backendError);
       }
       
-      // Mock 데이터 사용
       console.log('Mock 재생에너지 데이터 생성 중...');
       const data = this.generateRealisticRenewableData();
       console.log(`재생에너지 데이터 ${data.length}건 생성 완료`);
@@ -475,62 +503,79 @@ class RealApiService {
     try {
       console.log('새만금 기상 데이터 조회 중...');
       
-      // 실제 기상청 API 호출
-      const enhancedWeatherData = await this.getEnhancedWeatherData();
-      
-      if (enhancedWeatherData) {
-        console.log(`기상청 API에서 실시간 데이터 수신`);
-        
-        const today = new Date();
-        const baseDate = today.toISOString().slice(0, 10).replace(/-/g, '');
-        const baseTime = '0500';
-        
-        return {
-          baseDate,
-          baseTime,
-          observations: [
-            { 
-              category: '기온', 
-              obsrValue: `${enhancedWeatherData.current.temperature}°C`, 
-              nx: String(SAEMANGEUM_COORDS.nx), 
-              ny: String(SAEMANGEUM_COORDS.ny) 
-            },
-            { 
-              category: '습도', 
-              obsrValue: `${enhancedWeatherData.current.humidity}%`, 
-              nx: String(SAEMANGEUM_COORDS.nx), 
-              ny: String(SAEMANGEUM_COORDS.ny) 
-            },
-            { 
-              category: '풍속', 
-              obsrValue: `${enhancedWeatherData.current.windSpeed}m/s`, 
-              nx: String(SAEMANGEUM_COORDS.nx), 
-              ny: String(SAEMANGEUM_COORDS.ny) 
-            },
-            { 
-              category: '강수량', 
-              obsrValue: enhancedWeatherData.current.precipitation, 
-              nx: String(SAEMANGEUM_COORDS.nx), 
-              ny: String(SAEMANGEUM_COORDS.ny) 
-            },
-            { 
-              category: '강수확률', 
-              obsrValue: `${enhancedWeatherData.current.precipitationProbability}%`, 
-              nx: String(SAEMANGEUM_COORDS.nx), 
-              ny: String(SAEMANGEUM_COORDS.ny) 
-            },
-            { 
-              category: '하늘상태', 
-              obsrValue: this.getSkyConditionText(enhancedWeatherData.current.skyCondition), 
-              nx: String(SAEMANGEUM_COORDS.nx), 
-              ny: String(SAEMANGEUM_COORDS.ny) 
-            }
-          ]
-        };
+      try {
+        const response = await fetch('http://localhost:3001/api/weather');
+        if (response.ok) {
+          const data = await response.json();
+          
+          // 백엔드에서 오류 응답인지 확인
+          if (data.error) {
+            console.warn('백엔드에서 오류 응답:', data.error);
+            throw new Error(data.error);
+          }
+          
+          console.log(`✅ 백엔드에서 실제 기상 데이터 수신`);
+          
+          if (data.response?.header?.resultCode === '00') {
+            const items = data.response?.body?.items?.item || [];
+            
+            const baseDate = items[0]?.baseDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const baseTime = items[0]?.baseTime || '1800';
+            
+            return {
+              baseDate,
+              baseTime,
+              observations: [
+                { 
+                  category: '기온', 
+                  obsrValue: `${items.find((item: any) => item.category === 'T1H')?.obsrValue || '22'}°C`, 
+                  nx: String(SAEMANGEUM_COORDS.nx), 
+                  ny: String(SAEMANGEUM_COORDS.ny) 
+                },
+                { 
+                  category: '습도', 
+                  obsrValue: `${items.find((item: any) => item.category === 'REH')?.obsrValue || '65'}%`, 
+                  nx: String(SAEMANGEUM_COORDS.nx), 
+                  ny: String(SAEMANGEUM_COORDS.ny) 
+                },
+                { 
+                  category: '풍속', 
+                  obsrValue: `${items.find((item: any) => item.category === 'WSD')?.obsrValue || '3.2'}m/s`, 
+                  nx: String(SAEMANGEUM_COORDS.nx), 
+                  ny: String(SAEMANGEUM_COORDS.ny) 
+                },
+                { 
+                  category: '강수량', 
+                  obsrValue: `${items.find((item: any) => item.category === 'RN1')?.obsrValue || '0'}mm`, 
+                  nx: String(SAEMANGEUM_COORDS.nx), 
+                  ny: String(SAEMANGEUM_COORDS.ny) 
+                },
+                { 
+                  category: '강수형태', 
+                  obsrValue: this.getPrecipitationTypeText(items.find((item: any) => item.category === 'PTY')?.obsrValue || '0'), 
+                  nx: String(SAEMANGEUM_COORDS.nx), 
+                  ny: String(SAEMANGEUM_COORDS.ny) 
+                },
+                { 
+                  category: '풍향', 
+                  obsrValue: `${items.find((item: any) => item.category === 'VEC')?.obsrValue || '225'}°`, 
+                  nx: String(SAEMANGEUM_COORDS.nx), 
+                  ny: String(SAEMANGEUM_COORDS.ny) 
+                }
+              ]
+            };
+          } else {
+            throw new Error('기상청 API 응답 오류');
+          }
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (backendError) {
+        console.warn('백엔드 기상 API 호출 실패, 기본 데이터로 폴백:', backendError);
       }
       
-      // 기상청 API 실패 시 기본 데이터 제공
-      console.log('기상청 API 실패, 기본 데이터 사용');
+      // 기본 데이터 제공
+      console.log('기본 기상 데이터 사용');
       const today = new Date();
       const baseDate = today.toISOString().slice(0, 10).replace(/-/g, '');
       const baseTime = String(today.getHours()).padStart(2, '0') + '00';
@@ -553,7 +598,17 @@ class RealApiService {
     }
   }
 
-  // 하늘 상태 텍스트 변환
+  // 강수형태 텍스트 변환 추가
+  private getPrecipitationTypeText(ptyCode: string): string {
+    const precipitationTypes: Record<string, string> = {
+      '0': '없음',
+      '1': '비',
+      '2': '비/눈',
+      '3': '눈',
+      '4': '소나기'
+    };
+    return precipitationTypes[ptyCode] || '없음';
+  }
   private getSkyConditionText(skyCode: string): string {
     const skyConditions: Record<string, string> = {
       '1': '맑음',
@@ -566,8 +621,23 @@ class RealApiService {
   // 환경 모니터링 데이터 조회 (실시간 대기질 정보)
   async getEnvironmentData(): Promise<ProcessedEnvironmentData[]> {
     try {
-      console.log('새만금 환경 모니터링 데이터 생성 중...');
+      console.log('새만금 환경 모니터링 데이터 조회 중...');
       
+      // Enhanced API Service를 사용하여 실제 KOSIS API 호출 시도
+      if (API_SERVICE_KEY) {
+        try {
+          const { enhancedApiService } = await import('./enhanced-api-service');
+          const realData = await enhancedApiService.getKOSISAirQualityData();
+          if (realData && realData.length > 0) {
+            console.log(`KOSIS API에서 ${realData.length}건 대기질 데이터 수신`);
+            return realData;
+          }
+        } catch (apiError) {
+          console.warn('환경 데이터 API 호출 실패, Mock 데이터로 폴백:', apiError);
+        }
+      }
+      
+      console.log('Mock 환경 모니터링 데이터 생성 중...');
       const currentTime = new Date().toISOString();
       
       // 새만금 지역 내 여러 측정소 데이터
@@ -718,19 +788,22 @@ class RealApiService {
     try {
       console.log('새만금 교통량 데이터 조회 중...');
       
-      // API 복구 시 실제 API 사용
-      if (ENABLE_API_FALLBACK && API_SERVICE_KEY) {
-        const apiData = await this.callSaemangumApi('TRAFFIC', {
-          year: new Date().getFullYear().toString(),
-          month: String(new Date().getMonth() + 1).padStart(2, '0'),
-          departure: '전주',
-          destination: '새만금'
-        });
-        
-        if (apiData && apiData.length > 0) {
-          console.log(`새만금개발청 교통량 API에서 ${apiData.length}건 데이터 수신`);
-          return this.processTrafficApiData(apiData);
+      try {
+        const response = await fetch('http://localhost:3001/api/traffic');
+        if (response.ok) {
+          const data = await response.json();
+          // 백엔드에서 오류 응답인지 확인
+          if (data.error) {
+            console.warn('백엔드에서 오류 응답:', data.error);
+            throw new Error(data.error);
+          }
+          console.log(`✅ 백엔드에서 실제 교통량 데이터 ${data.length}건 수신`);
+          return this.processTrafficApiData(data);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
         }
+      } catch (backendError) {
+        console.warn('백엔드 교통량 API 호출 실패, Mock 데이터로 폴백:', backendError);
       }
       
       // Mock 데이터 사용

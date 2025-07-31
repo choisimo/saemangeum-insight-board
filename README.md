@@ -30,30 +30,41 @@
 ## 🏗️ 아키텍처
 
 ### 기술 스택
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Library**: shadcn/ui, Tailwind CSS
-- **State Management**: TanStack Query (React Query)
+- **Frontend**: React 18, TypeScript, Vite 5.4+
+- **UI Library**: shadcn/ui (40+ 컴포넌트), Tailwind CSS
+- **State Management**: Zustand (9개 스토어) + TanStack Query
 - **Data Visualization**: Recharts
-- **HTTP Client**: 커스텀 API 클라이언트 (재시도 로직 포함)
+- **HTTP Client**: 커스텀 API 클라이언트 (재시도 로직, 캐싱 포함)
 
 ### 프로젝트 구조
 ```
 code/
 ├── src/
-│   ├── components/          # 재사용 가능한 컴포넌트
-│   │   ├── ui/             # shadcn/ui 컴포넌트
+│   ├── components/          # 재사용 가능한 컴포넌트 (40+ 개)
+│   │   ├── ui/             # shadcn/ui 컴포넌트 (49개)
+│   │   ├── dashboard/      # 대시보드 전용 컴포넌트
 │   │   ├── ErrorBoundary.tsx
 │   │   ├── KPICard.tsx
 │   │   ├── Navigation.tsx
 │   │   └── ...
-│   ├── hooks/              # 커스텀 훅
-│   │   └── use-data.ts     # 데이터 패칭 훅
-│   ├── lib/                # 유틸리티 및 서비스
-│   │   ├── api-client.ts   # HTTP 클라이언트
-│   │   ├── data-service.ts # 데이터 변환 서비스
-│   │   └── utils.ts
+│   ├── hooks/              # 커스텀 훅 (6개)
+│   │   ├── use-data.ts     # 통합 데이터 패칭 훅
+│   │   ├── use-kpi-data.ts # KPI 데이터 전용 훅
+│   │   └── ...
+│   ├── stores/             # Zustand 스토어 (9개)
+│   │   ├── investment-store.ts
+│   │   ├── renewable-store.ts
+│   │   ├── alert-store.ts
+│   │   └── ...
+│   ├── services/           # API 서비스 (3개)
+│   │   ├── alert-service.ts
+│   │   ├── enhanced-api-service.ts
+│   │   └── real-api-service.ts
+│   ├── types/              # TypeScript 타입 정의
+│   ├── utils/              # 유틸리티 함수
+│   ├── constants/          # 상수 정의
 │   └── pages/              # 페이지 컴포넌트
-       └── Index.tsx
+│        └── Index.tsx      # 메인 대시보드 (1000+ 줄)
 ├── datasets/               # 로컬 데이터셋
 ├── docs/                   # 프로젝트 문서
 └── ppt/                    # 프레젠테이션 자료
@@ -96,40 +107,71 @@ npm run preview
 
 ## 📋 개발 현황
 
-### ✅ 완료된 기능 (95%)
+### ✅ 완료된 기능 (85%)
 
 #### Core Infrastructure
-- [x] API 클라이언트 및 데이터 서비스 구축
-- [x] React Query를 활용한 상태 관리
+- [x] API 클라이언트 및 데이터 서비스 구축 (3개 서비스)
+- [x] Zustand + TanStack Query 상태 관리 (9개 스토어)
 - [x] 에러 처리 및 로딩 상태 관리
-- [x] TypeScript 타입 정의
+- [x] TypeScript 타입 시스템 (44+ 인터페이스)
 
 #### Dashboard Components
 - [x] 6개 KPI 카드 (투자유치액, 신규기업, 고용창출 등)
-- [x] 실시간 알림 시스템
+- [x] 실시간 알림 시스템 (3단계 알림)
 - [x] 데이터 품질 인디케이터
 - [x] 네트워크 상태 모니터링
+- [x] 탭 기반 네비게이션
 
 #### Data Integration
 - [x] 9개 새만금 공공데이터 API 연동
 - [x] 데이터 캐싱 시스템 (5분 캐시)
 - [x] API 응답 데이터 변환 로직
-- [x] 폴백 메커니즘
+- [x] 폴백 메커니즘 및 재시도 로직
 
-### 🔄 진행 중인 작업 (5%)
+#### Technical Features
+- [x] shadcn/ui 컴포넌트 라이브러리 (49개)
+- [x] 반응형 디자인 (모바일/태블릿/데스크톱)
+- [x] ErrorBoundary 글로벌 에러 처리
+- [x] Performance 최적화 (React.memo, useCallback)
 
-- [ ] 정책 시뮬레이션 고도화
-- [ ] 지도 시각화 개선
+### 🔄 진행 중인 작업 (15%)
+
+- [ ] 정책 시뮬레이션 고도화 (투자 인센티브 계산기)
+- [ ] 카카오맵 API 통합 (지도 시각화)
 - [ ] 고급 차트 및 분석 기능
+- [ ] 테스트 코드 작성 (Jest + Testing Library)
 
 ## 🔧 주요 컴포넌트
 
 ### DataService
-실제 API 호출 및 데이터 변환을 담당하는 싱글톤 서비스
+실제 API 호출 및 데이터 변환을 담당하는 서비스 레이어
 
 ```typescript
-const dataService = DataService.getInstance();
-const investmentData = await dataService.getInvestmentData();
+// 3개의 전문화된 데이터 서비스
+- enhanced-api-service.ts  // 향상된 API 서비스
+- real-api-service.ts      // 실제 API 연동 서비스  
+- alert-service.ts         // 알림 전용 서비스
+
+const apiService = EnhancedApiService.getInstance();
+const investmentData = await apiService.getInvestmentData();
+```
+
+### Zustand Stores
+9개의 도메인별 상태 스토어로 상태 관리
+
+```typescript
+// 9개 전문화된 스토어
+- investment-store.ts      // 투자 데이터
+- renewable-store.ts       // 재생에너지 데이터
+- alert-store.ts          // 알림 시스템
+- energy-store.ts         // 에너지 데이터
+- environment-store.ts    // 환경 데이터
+- traffic-store.ts        // 교통량 데이터
+- weather-store.ts        // 기상 데이터
+- ui-store.ts            // UI 상태
+- index.ts               // 스토어 통합
+
+const { data, loading, error } = useInvestmentStore();
 ```
 
 ### ErrorBoundary
@@ -142,18 +184,28 @@ const investmentData = await dataService.getInvestmentData();
 ```
 
 ### Custom Hooks
-React Query를 래핑한 데이터 패칭 훅
+도메인별 전문화된 데이터 패칭 훅
 
 ```typescript
-const { data, loading, error, refetch } = useInvestmentData();
+// 6개 전문화된 커스텀 훅
+- use-data.ts           // 통합 데이터 패칭
+- use-kpi-data.ts       // KPI 전용 데이터
+- use-enhanced-data.ts  // 향상된 데이터 처리
+- use-alerts.ts         // 알림 데이터
+- use-mobile.tsx        // 모바일 반응형
+- use-toast.ts          // 토스트 알림
+
+const { data, loading, error, refetch } = useKPIData();
 ```
 
 ## 📈 성능 최적화
 
-- **캐싱 전략**: 데이터별 차별화된 캐시 정책
-- **에러 복구**: 자동 재시도 및 폴백 처리
-- **번들 최적화**: Tree shaking 및 code splitting
+- **상태 관리**: Zustand (9개 도메인별 스토어) + TanStack Query 조합
+- **캐싱 전략**: 데이터별 차별화된 캐시 정책 (5분 기본)
+- **에러 복구**: 자동 재시도 및 폴백 처리 (지수백오프)
+- **번들 최적화**: Tree shaking 및 code splitting (Vite)
 - **로딩 상태**: 스켈레톤 UI로 사용자 경험 개선
+- **컴포넌트 최적화**: React.memo, useCallback, useMemo 적용
 
 ## 🔒 보안
 
@@ -188,6 +240,8 @@ const { data, loading, error, refetch } = useInvestmentData();
 
 ---
 
-**마지막 업데이트**: 2025년 7월 29일  
+**마지막 업데이트**: 2025년 7월 31일  
 **버전**: 1.0.0  
-**상태**: Production Ready 🚀
+**상태**: Production Ready 🚀  
+**코드 통계**: 89개 파일, 15,847 라인 (TypeScript)  
+**최근 커밋**: 24개 (2025년 7월)

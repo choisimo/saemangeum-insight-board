@@ -68,13 +68,13 @@ VITE_KAKAO_MAP_API_KEY=your_kakao_api_key_here
 ### 폴더 구조 가이드라인
 ```
 src/
-├── components/          # React 컴포넌트
-│   ├── ui/             # 재사용 가능한 UI 컴포넌트 (shadcn/ui)
-│   ├── dashboard/      # 대시보드 전용 컴포넌트
+├── components/          # React 컴포넌트 (40+ 개)
+│   ├── ui/             # 재사용 가능한 UI 컴포넌트 (shadcn/ui 49개)
+│   ├── dashboard/      # 대시보드 전용 컴포넌트 (3개)
 │   └── [Feature].tsx   # 기능별 컴포넌트 (PascalCase)
-├── hooks/              # 커스텀 React 훅
-├── stores/             # Zustand 스토어 (기능별 분리)
-├── services/           # 외부 API 및 비즈니스 로직
+├── hooks/              # 커스텀 React 훅 (6개)
+├── stores/             # Zustand 스토어 (9개, 기능별 분리)
+├── services/           # 외부 API 및 비즈니스 로직 (3개)
 ├── types/              # TypeScript 타입 정의
 ├── utils/              # 유틸리티 함수
 ├── constants/          # 상수 정의
@@ -189,6 +189,11 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { InvestmentStore, InvestmentData } from '@/types/dashboard';
 
+// 9개 전문화된 스토어
+// - investment-store.ts, renewable-store.ts, alert-store.ts
+// - energy-store.ts, environment-store.ts, traffic-store.ts
+// - weather-store.ts, ui-store.ts, index.ts
+
 export const useInvestmentStore = create<InvestmentStore>()(
   subscribeWithSelector((set, get) => ({
     // 초기 상태
@@ -201,7 +206,7 @@ export const useInvestmentStore = create<InvestmentStore>()(
     fetchData: async () => {
       set({ loading: true, error: null });
       try {
-        const data = await dataService.getInvestmentData();
+        const data = await apiService.getInvestmentData();
         set({ 
           data, 
           loading: false, 
@@ -220,7 +225,7 @@ export const useInvestmentStore = create<InvestmentStore>()(
   }))
 );
 
-// 셀렉터 훅
+// 셀렉터 훅 패턴
 export const useInvestmentData = () => useInvestmentStore(state => state.data);
 export const useInvestmentLoading = () => useInvestmentStore(state => state.loading);
 export const useInvestmentError = () => useInvestmentStore(state => state.error);
@@ -251,8 +256,12 @@ const queryClient = new QueryClient({
 
 ### API 클라이언트 사용법
 ```typescript
-// services/data-service.ts
-class ApiClient {
+// 3개 전문화된 서비스
+// - enhanced-api-service.ts: 향상된 API 서비스
+// - real-api-service.ts: 실제 API 연동 서비스
+// - alert-service.ts: 알림 전용 서비스
+
+class EnhancedApiService {
   private async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<any> {
     const url = new URL(`${this.baseUrl}${endpoint}`);
     
@@ -294,7 +303,7 @@ class ApiClient {
 
 ### 에러 처리 패턴
 ```typescript
-// 서비스 레벨 에러 처리
+// 지수백오프를 사용한 재시도 로직
 export async function fetchWithRetry<T>(
   fetchFn: () => Promise<T>,
   maxRetries: number = 3
@@ -305,12 +314,28 @@ export async function fetchWithRetry<T>(
     } catch (error) {
       if (i === maxRetries) throw error;
       
+      // 지수백오프: 1초 → 2초 → 4초 → 8초...
       const delay = Math.min(1000 * 2 ** i, 30000);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
   throw new Error('Max retries exceeded');
 }
+
+// TanStack Query 설정에서 재시도 로직
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        if (error instanceof Error && error.message.includes('fetch')) {
+          return failureCount < 3;
+        }
+        return failureCount < 1;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+});
 ```
 
 ## 🧩 컴포넌트 개발
@@ -486,6 +511,6 @@ npm run build
 
 ---
 
-**최종 업데이트**: 2025-07-30  
+**최종 업데이트**: 2025-07-31  
 **작성자**: 개발팀  
-**버전**: 1.0.0
+**버전**: 1.1.0

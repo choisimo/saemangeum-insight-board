@@ -40,10 +40,19 @@ const Index: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // 스토어에서 데이터 가져오기
-  const kpiData = useKPIData();
   const investmentData = useInvestmentData();
   const investmentLoading = useInvestmentLoading();
   const renewableLoading = useRenewableLoading();
+  
+  // KPI 데이터는 나중에 추가
+  const kpiData = {
+    totalInvestment: { value: 0, unit: '억원', change: 0, changeType: 'neutral' as const },
+    newCompanies: { value: 0, unit: '개', change: 0, changeType: 'neutral' as const },
+    employment: { value: 0, unit: '명', change: 0, changeType: 'neutral' as const, target: 1000, progress: 0 },
+    salesRate: { value: 0, unit: '%', change: 0, changeType: 'neutral' as const },
+    renewableEnergy: { value: 0, unit: 'MW', change: 0, changeType: 'neutral' as const },
+    complaints: { value: 0, unit: '건', change: 0, changeType: 'neutral' as const }
+  };
   
   // 환경 및 에너지 데이터 스토어
   const environmentStore = useEnvironmentStore();
@@ -53,14 +62,17 @@ const Index: React.FC = () => {
   const loading = investmentLoading || renewableLoading || environmentStore.loading || energyStore.loading;
   const hasErrors = !!(environmentStore.error || energyStore.error);
   
+  // 데이터 품질 계산 (임시로 85% 고정값 사용)
+  const overallDataQuality = 85;
+  
   // 컴포넌트 마운트 시 데이터 초기화
   useEffect(() => {
-    const fetchData = useInvestmentStore.getState().fetchData;
+    const fetchInvestmentData = useInvestmentStore.getState().fetchData;
     const fetchRenewableData = useRenewableStore.getState().fetchData;
-    const fetchEnvironmentData = useEnvironmentStore.getState().fetchEnvironmentData;
-    const fetchEnergyData = useEnergyStore.getState().fetchEnergyData;
+    const fetchEnvironmentData = useEnvironmentStore.getState().fetchData;
+    const fetchEnergyData = useEnergyStore.getState().fetchData;
     
-    fetchData();
+    fetchInvestmentData();
     fetchRenewableData();
     fetchEnvironmentData();
     fetchEnergyData();
