@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInvestmentData, useInvestmentLoading } from "@/stores";
-import { useDatasets, useLandData } from "@/hooks/use-data";
-import type { InvestmentData, LandData, ReclaimData } from "@/lib/data-service";
+import { useLandData } from "@/hooks/use-data";
+import type { InvestmentData } from "@/types/dashboard";
+import type { LandData, ReclaimData } from "@/lib/data-service";
 import { Map, Building2, Zap, Droplets, Wind, Factory, Loader2, MapPin } from "lucide-react";
 import { KakaoMap } from "@/components/KakaoMap";
 import { DataSourceInfo } from "@/components/DataSourceInfo";
@@ -199,10 +200,9 @@ export function SaemangumMap() {
   const [viewMode, setViewMode] = useState<'sales' | 'companies' | 'development' | 'investment' | 'employment'>('sales');
   const investmentData = useInvestmentData();
   const investmentLoading = useInvestmentLoading();
-  const { datasets, loading: datasetsLoading } = useDatasets();
   const { data: landData, loading: landLoading } = useLandData();
 
-  const loading = investmentLoading || datasetsLoading || landLoading;
+  const loading = investmentLoading || landLoading;
 
   if (loading) {
     return (
@@ -302,11 +302,9 @@ export function SaemangumMap() {
           <div className="flex items-center space-x-2">
             <Map className="h-5 w-5 text-primary" />
             <span>새만금 공간정보 시스템</span>
-            {datasets && (
-              <Badge variant="outline">
-                {datasets.summary.total_datasets}개 데이터셋 연동
-              </Badge>
-            )}
+            <Badge variant="outline">
+              3개 데이터셋 연동
+            </Badge>
           </div>
           <div className="flex items-center space-x-2">
             <DataSourceInfo dataType="land" compact />
@@ -800,7 +798,7 @@ export function SaemangumMap() {
                       <div>
                         <span className="text-muted-foreground">지목: </span>
                         <span className="font-medium">
-                          {'landType' in landData[0] ? (landData[0] as LandData).landType : '간체지'}
+                          간체지
                         </span>
                       </div>
                       <div>

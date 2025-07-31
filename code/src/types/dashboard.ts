@@ -47,27 +47,73 @@ export interface DashboardState {
   hasErrors: boolean;
 }
 
-// Zustand 스토어 타입 정의 (데이터 서비스 타입과 일치)
+// real-api-service와 일치하는 타입 정의
 export interface InvestmentData {
   id: string;
   company: string;
   sector: string;
+  region: string;
+  supportContent: string;
   investment: number; // 억원
   expectedJobs: number;
   progress: number; // 0-1
-  location: string;
-  startDate: string;
-  status: 'planning' | 'in-progress' | 'completed' | 'delayed';
+  status: string;
 }
 
 export interface RenewableData {
   id: string;
   region: string;
-  type: 'solar' | 'wind' | 'hydro' | 'other';
+  generationType: string;
   capacity: number; // MW
-  status: 'operational' | 'under-construction' | 'planned';
-  operator: string;
-  installDate?: string;
+  area: number; // 제곱미터
+  status: string;
+  progress?: number; // 진행률
+  coordinates?: { lat: number; lng: number };
+}
+
+export interface WeatherData {
+  baseDate: string;
+  baseTime: string;
+  observations: Array<{
+    category: string;
+    obsrValue: string;
+    nx: string;
+    ny: string;
+  }>;
+}
+
+export interface TrafficData {
+  id: string;
+  departure: string;
+  destination: string;
+  smallVehicles: number;
+  largeVehicles: number;
+  totalTraffic: number;
+  surveyDate: string;
+  timeSlot: string;
+}
+
+export interface EnvironmentData {
+  id: string;
+  location: string;
+  airQualityIndex: number;
+  pm25: number;
+  pm10: number;
+  ozone: number;
+  carbonMonoxide: number;
+  measurementTime: string;
+  status: string; // 좋음, 보통, 나쁨, 매우나쁨
+}
+
+export interface EnergyData {
+  id: string;
+  facilityName: string;
+  energyType: string; // 태양광, 풍력, 연료전지 등
+  currentOutput: number; // MW
+  maxCapacity: number; // MW
+  efficiency: number; // %
+  operationStatus: string;
+  lastUpdated: string;
 }
 
 export interface AlertData {
@@ -85,7 +131,7 @@ export interface AlertData {
   priority?: 'low' | 'medium' | 'high';
 }
 
-// 스토어 상태 인터페이스
+// 스토어 상태 인터페이스 업데이트 (새로운 데이터 타입 사용)
 export interface InvestmentStore {
   data: InvestmentData[];
   loading: boolean;
@@ -109,6 +155,62 @@ export interface RenewableStore {
   // 액션
   fetchData: () => Promise<void>;
   setData: (data: RenewableData[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearData: () => void;
+}
+
+export interface TrafficStore {
+  data: TrafficData[];
+  loading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  
+  // 액션
+  fetchData: () => Promise<void>;
+  setData: (data: TrafficData[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearData: () => void;
+}
+
+export interface EnvironmentStore {
+  data: EnvironmentData[];
+  loading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  
+  // 액션
+  fetchData: () => Promise<void>;
+  setData: (data: EnvironmentData[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearData: () => void;
+}
+
+export interface EnergyStore {
+  data: EnergyData[];
+  loading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  
+  // 액션
+  fetchData: () => Promise<void>;
+  setData: (data: EnergyData[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearData: () => void;
+}
+
+export interface WeatherStore {
+  data: WeatherData | null;
+  loading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  
+  // 액션
+  fetchData: () => Promise<void>;
+  setData: (data: WeatherData | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearData: () => void;

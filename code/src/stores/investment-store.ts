@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { InvestmentStore, InvestmentData } from '../types/dashboard';
-import { dataService } from '../lib/data-service';
+import { realApiService } from '../services/real-api-service';
 
 /**
  * 투자 데이터 전역 상태 관리 스토어
@@ -15,7 +15,7 @@ export const useInvestmentStore = create<InvestmentStore>()(
       error: null,
       lastUpdated: null,
 
-      // 데이터 페칭 액션
+      // 데이터 페칭 액션 (realApiService 사용)
       fetchData: async () => {
         const { loading } = get();
         if (loading) return; // 중복 요청 방지
@@ -23,16 +23,12 @@ export const useInvestmentStore = create<InvestmentStore>()(
         set({ loading: true, error: null }, false, 'investment/fetchData/start');
 
         try {
-          const rawData = await dataService.getInvestmentData();
+          const data = await realApiService.getInvestmentData();
           
-          // API에서 실제 데이터가 반환된 경우에만 처리
-          if (rawData && rawData.length > 0) {
-            // 실제 데이터만 사용 (필터링 제거)
-            const transformedData: InvestmentData[] = rawData;
-
+          if (data && data.length > 0) {
             set(
               {
-                data: transformedData,
+                data,
                 loading: false,
                 lastUpdated: new Date(),
                 error: null
@@ -41,12 +37,11 @@ export const useInvestmentStore = create<InvestmentStore>()(
               'investment/fetchData/success'
             );
           } else {
-            // 데이터가 없는 경우 빈 배열과 에러 메시지 설정
             set(
               {
                 data: [],
                 loading: false,
-                error: 'API에서 투자 데이터를 가져올 수 없습니다'
+                error: '투자 데이터를 가져올 수 없습니다'
               },
               false,
               'investment/fetchData/empty'
@@ -56,7 +51,7 @@ export const useInvestmentStore = create<InvestmentStore>()(
           const errorMessage = error instanceof Error ? error.message : '투자 데이터 로딩 실패';
           set(
             {
-              data: [], // 에러 시 빈 배열만 설정
+              data: [],
               loading: false,
               error: errorMessage
             },
@@ -115,13 +110,16 @@ export const useInvestmentData = () => useInvestmentStore((state) => state.data)
 export const useInvestmentLoading = () => useInvestmentStore((state) => state.loading);
 export const useInvestmentError = () => useInvestmentStore((state) => state.error);
 
-// 액션 선택자 - 안정적인 참조를 위해 별도 선택자 사용
-const actionsSelector = (state: InvestmentStore) => ({
-  fetchData: state.fetchData,
-  setData: state.setData,
-  setLoading: state.setLoading,
-  setError: state.setError,
-  clearData: state.clearData
-});
+// 액션 선택자 - 메모이제이션으로 안정적인 참조 보장
+const actionsSelector = (state: InvestmentStore) => state;
 
-export const useInvestmentActions = () => useInvestmentStore(actionsSelector);
+export const useInvestmentActions = () => {
+  const store = useInvestmentStore(actionsSelector);
+  return {
+    fetchData: store.fetchData,
+    setData: store.setData,
+    setLoading: store.setLoading,
+    setError: store.setError,
+    clearData: store.clearData
+  };
+};

@@ -1,58 +1,53 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { dataService } from '@/lib/data-service';
+import { realApiService } from '@/services/real-api-service';
 import type { 
-  InvestmentData, 
-  RenewableEnergyData, 
-  WeatherData, 
-  TrafficData,
-  LandData,
-  ReclaimData,
-  BuildingPermitData,
-  UtilityData,
-  DataResponse
-} from '@/lib/data-service';
+  ProcessedInvestmentData, 
+  ProcessedRenewableData, 
+  ProcessedWeatherData, 
+  ProcessedTrafficData
+} from '@/services/real-api-service';
 
-// React Query 설정
+// React Query 설정 - 실제 API 호출용
 const QUERY_OPTIONS = {
-  staleTime: 5 * 60 * 1000, // 5분
-  gcTime: 10 * 60 * 1000, // 10분
-  refetchOnWindowFocus: false,
-  retry: 3,
-  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  staleTime: 2 * 60 * 1000, // 2분 (실제 데이터이므로 더 자주 갱신)
+  gcTime: 5 * 60 * 1000, // 5분
+  refetchOnWindowFocus: true, // 포커스 시 실제 데이터 갱신
+  retry: 2, // API 실패 시 2번만 재시도
+  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
 } as const;
 
-// 데이터셋 메타데이터 훅
-export function useDatasets(): {
-  datasets: DataResponse | null;
+// 데이터 품질 검증 훅
+export function useDataQuality(): {
+  quality: any;
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<DataResponse, Error> = useQuery({
-    queryKey: ['datasets'],
-    queryFn: () => dataService.loadDatasets(),
+  const query = useQuery({
+    queryKey: ['data-quality'],
+    queryFn: () => realApiService.validateAllData(),
     ...QUERY_OPTIONS,
-    staleTime: 30 * 60 * 1000, // 메타데이터는 30분 캐시
+    staleTime: 5 * 60 * 1000, // 데이터 품질은 5분 캐시
   });
 
   return {
-    datasets: query.data || null,
+    quality: query.data || null,
     loading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
   };
 }
 
-// 투자 데이터 훅
+// 투자 데이터 훅 - 실제 API만 사용
 export function useInvestmentData(): {
-  data: InvestmentData[];
+  data: ProcessedInvestmentData[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<InvestmentData[], Error> = useQuery({
-    queryKey: ['investment-data'],
-    queryFn: () => dataService.getInvestmentData(),
+  const query: UseQueryResult<ProcessedInvestmentData[], Error> = useQuery({
+    queryKey: ['real-investment-data'],
+    queryFn: () => realApiService.getInvestmentData(),
     ...QUERY_OPTIONS,
   });
 
@@ -64,16 +59,16 @@ export function useInvestmentData(): {
   };
 }
 
-// 교통량 데이터 훅
+// 교통량 데이터 훅 - 실제 API만 사용 (현재 API 없음)
 export function useTrafficData(): {
-  data: TrafficData[];
+  data: ProcessedTrafficData[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<TrafficData[], Error> = useQuery({
-    queryKey: ['traffic-data'],
-    queryFn: () => dataService.getTrafficData(),
+  const query: UseQueryResult<ProcessedTrafficData[], Error> = useQuery({
+    queryKey: ['real-traffic-data'],
+    queryFn: () => realApiService.getTrafficData(),
     ...QUERY_OPTIONS,
   });
 
@@ -85,16 +80,16 @@ export function useTrafficData(): {
   };
 }
 
-// 재생에너지 데이터 훅
+// 재생에너지 데이터 훅 - 실제 API만 사용
 export function useRenewableEnergyData(): {
-  data: RenewableEnergyData[];
+  data: ProcessedRenewableData[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<RenewableEnergyData[], Error> = useQuery({
-    queryKey: ['renewable-energy-data'],
-    queryFn: () => dataService.getRenewableEnergyData(),
+  const query: UseQueryResult<ProcessedRenewableData[], Error> = useQuery({
+    queryKey: ['real-renewable-energy-data'],
+    queryFn: () => realApiService.getRenewableEnergyData(),
     ...QUERY_OPTIONS,
   });
 
@@ -106,18 +101,18 @@ export function useRenewableEnergyData(): {
   };
 }
 
-// 날씨 데이터 훅
+// 날씨 데이터 훅 - 실제 API만 사용
 export function useWeatherData(): {
-  data: WeatherData | null;
+  data: ProcessedWeatherData | null;
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<WeatherData | null, Error> = useQuery({
-    queryKey: ['weather-data'],
-    queryFn: () => dataService.getWeatherData(),
+  const query: UseQueryResult<ProcessedWeatherData | null, Error> = useQuery({
+    queryKey: ['real-weather-data'],
+    queryFn: () => realApiService.getWeatherData(),
     ...QUERY_OPTIONS,
-    staleTime: 2 * 60 * 1000, // 날씨는 2분마다 갱신
+    staleTime: 1 * 60 * 1000, // 실제 기상 데이터는 1분마다 갱신
   });
 
   return {
@@ -128,97 +123,71 @@ export function useWeatherData(): {
   };
 }
 
-// 토지 데이터 훅
+// 토지 데이터 훅 - 실제 API 없음
 export function useLandData(): {
-  data: Array<LandData | ReclaimData>;
+  data: any[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<Array<LandData | ReclaimData>, Error> = useQuery({
-    queryKey: ['land-data'],
-    queryFn: () => dataService.getLandData(),
-    ...QUERY_OPTIONS,
-  });
-
   return {
-    data: query.data || [],
-    loading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
+    data: [], // 실제 API가 없으므로 빈 배열
+    loading: false,
+    error: new Error('토지 데이터 API가 설정되지 않았습니다.'),
+    refetch: () => {},
   };
 }
 
-// 건축 허가 데이터 훅
+// 건축 허가 데이터 훅 - 실제 API 없음
 export function useBuildingPermitData(): {
-  data: BuildingPermitData[];
+  data: any[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<BuildingPermitData[], Error> = useQuery({
-    queryKey: ['building-permit-data'],
-    queryFn: () => dataService.getBuildingPermitData(),
-    ...QUERY_OPTIONS,
-  });
-
   return {
-    data: query.data || [],
-    loading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
+    data: [], // 실제 API가 없으므로 빈 배열
+    loading: false,
+    error: new Error('건축 허가 데이터 API가 설정되지 않았습니다.'),
+    refetch: () => {},
   };
 }
 
-// 유틸리티 데이터 훅
+// 유틸리티 데이터 훅 - 실제 API 없음
 export function useUtilityData(): {
-  data: UtilityData[];
+  data: any[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
 } {
-  const query: UseQueryResult<UtilityData[], Error> = useQuery({
-    queryKey: ['utility-data'],
-    queryFn: () => dataService.getUtilityData(),
-    ...QUERY_OPTIONS,
-  });
-
   return {
-    data: query.data || [],
-    loading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
+    data: [], // 실제 API가 없으므로 빈 배열
+    loading: false,
+    error: new Error('유틸리티 데이터 API가 설정되지 않았습니다.'),
+    refetch: () => {},
   };
 }
 
-// 모든 데이터를 한번에 가져오는 훅
+// 실제 API 데이터만 가져오는 훅
 export function useAllData() {
   const investment = useInvestmentData();
   const renewable = useRenewableEnergyData();
   const weather = useWeatherData();
   const traffic = useTrafficData();
-  const land = useLandData();
-  const building = useBuildingPermitData();
-  const utility = useUtilityData();
-  const datasets = useDatasets();
+  const quality = useDataQuality();
 
   const loading = investment.loading || renewable.loading || weather.loading || 
-                 traffic.loading || land.loading || building.loading || 
-                 utility.loading || datasets.loading;
+                 traffic.loading || quality.loading;
 
   const error = investment.error || renewable.error || weather.error || 
-               traffic.error || land.error || building.error || 
-               utility.error || datasets.error;
+               traffic.error || quality.error;
 
   const refetchAll = () => {
     investment.refetch();
     renewable.refetch();
     weather.refetch();
     traffic.refetch();
-    land.refetch();
-    building.refetch();
-    utility.refetch();
-    datasets.refetch();
+    quality.refetch();
   };
 
   return {
@@ -227,10 +196,7 @@ export function useAllData() {
       renewable: renewable.data,
       weather: weather.data,
       traffic: traffic.data,
-      land: land.data,
-      building: building.data,
-      utility: utility.data,
-      datasets: datasets.datasets,
+      quality: quality.quality,
     },
     loading,
     error,
@@ -238,44 +204,4 @@ export function useAllData() {
   };
 }
 
-// 데이터 품질 검증 훅
-export function useDataQuality() {
-  const allData = useAllData();
-
-  const quality = {
-    investment: {
-      total: allData.data.investment.length,
-      valid: allData.data.investment.filter(item => item.company && item.investment > 0).length,
-    },
-    renewable: {
-      total: allData.data.renewable.length,
-      valid: allData.data.renewable.filter(item => item.region && item.capacity > 0).length,
-    },
-    traffic: {
-      total: allData.data.traffic.length,
-      valid: allData.data.traffic.filter(item => item.totalTraffic > 0).length,
-    },
-    land: {
-      total: allData.data.land.length,
-      valid: allData.data.land.filter(item => 
-        ('location' in item && item.location) || ('region' in item && item.region)
-      ).length,
-    },
-  };
-
-  const overallQuality = {
-    totalRecords: Object.values(quality).reduce((sum, q) => sum + q.total, 0),
-    validRecords: Object.values(quality).reduce((sum, q) => sum + q.valid, 0),
-    qualityScore: Object.values(quality).reduce((sum, q) => sum + q.total, 0) > 0 
-      ? Math.round((Object.values(quality).reduce((sum, q) => sum + q.valid, 0) / 
-         Object.values(quality).reduce((sum, q) => sum + q.total, 0)) * 100)
-      : 0,
-  };
-
-  return {
-    quality,
-    overallQuality,
-    loading: allData.loading,
-    error: allData.error,
-  };
-}
+// 실제 API 데이터 품질 검증 훅 (위에서 이미 정의됨)

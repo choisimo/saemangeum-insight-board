@@ -24,7 +24,8 @@ export const InvestmentOverview: React.FC<InvestmentOverviewProps> = ({ data }) 
   // 투자 현황 통계 계산
   const totalInvestment = data.reduce((sum, item) => sum + item.investment, 0);
   const totalJobs = data.reduce((sum, item) => sum + item.expectedJobs, 0);
-  const avgProgress = data.length > 0 ? data.reduce((sum, item) => sum + item.progress, 0) / data.length : 0;
+  // 진행률은 이미 백분율이므로 추가로 100을 곱하지 않음
+  const avgProgress = data.length > 0 ? data.reduce((sum, item) => sum + (item.progress || 0), 0) / data.length : 0;
   
   // 상태별 분류
   const statusCounts = data.reduce((acc, item) => {
@@ -94,8 +95,8 @@ export const InvestmentOverview: React.FC<InvestmentOverviewProps> = ({ data }) 
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(avgProgress * 100).toFixed(2)}%</div>
-            <Progress value={avgProgress * 100} className="mt-2" />
+            <div className="text-2xl font-bold">{avgProgress.toFixed(2)}%</div>
+            <Progress value={avgProgress} className="mt-2" />
           </CardContent>
         </Card>
       </div>
@@ -181,9 +182,9 @@ export const InvestmentOverview: React.FC<InvestmentOverviewProps> = ({ data }) 
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span>진행률</span>
-                        <span>{(project.progress * 100).toFixed(2)}%</span>
+                        <span>{project.progress.toFixed(2)}%</span>
                       </div>
-                      <Progress value={project.progress * 100} className="h-2" />
+                      <Progress value={project.progress} className="h-2" />
                     </div>
                   </div>
                 </div>

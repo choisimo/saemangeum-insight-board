@@ -11,20 +11,56 @@
 .env.test.local
 .env.production.local
 .env.staging
+.env.secrets
+
+# API 키 파일들
+api-keys.json
+api-keys.js
+api-keys.ts
+config/api-keys.*
+config/secrets.*
+secrets.json
+secrets.js
+secrets.ts
+apikeys.*
+*.apikey
 
 # 비밀 키 및 인증서
 *.key
 *.pem
 *.p12
 *.pfx
+*.crt
+*.cert
+*.ca-bundle
 secrets/
 credentials/
-config/secrets.*
+private/
+auth/
 
-# 데이터베이스 백업 및 덤프
+# 클라우드 서비스 인증
+.aws/
+.gcp/
+.azure/
+firebase-adminsdk-*.json
+service-account*.json
+gcloud-service-key.json
+
+# OAuth 및 토큰
+oauth.json
+token.json
+refresh_token.json
+access_token.json
+jwt.secret
+*.token
+
+# 데이터베이스 연결 및 백업
 *.sql
 *.dump
 *.backup
+database.url
+db-config.*
+connection-string.*
 
 # ===== 빌드 및 컴파일 결과물 (Build Artifacts) =====
 # Node.js 빌드

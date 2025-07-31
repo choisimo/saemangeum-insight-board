@@ -228,12 +228,11 @@ export function KakaoMap({ data = [], height = "400px" }: KakaoMapProps) {
       return { isValid: false, message: '예시 API 키를 사용하고 있습니다. 실제 API 키를 입력해주세요.' };
     }
     
-    // 카카오 JavaScript API 키 형식 검증 (32자 16진수)
-    const kakaoKeyPattern = /^[a-f0-9]{32}$/i;
-    if (!kakaoKeyPattern.test(apiKey)) {
+    // 카카오 JavaScript API 키 형식은 다양할 수 있으므로 간단한 검증만 수행
+    if (apiKey.length < 10) {
       return { 
         isValid: false, 
-        message: '잘못된 API 키 형식입니다. 카카오 JavaScript API 키는 32자 16진수여야 합니다.' 
+        message: 'API 키가 너무 짧습니다.' 
       };
     }
     

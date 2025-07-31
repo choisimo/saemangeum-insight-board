@@ -9,7 +9,8 @@ import {
   Menu,
   X,
   FileText,
-  Activity
+  Activity,
+  Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SettingsDialog } from "./SettingsDialog";
@@ -25,6 +26,7 @@ const navigationItems = [
   { id: "dashboard", label: "대시보드", icon: BarChart3, description: "종합 현황 및 KPI" },
   { id: "reports", label: "보고서", icon: FileText, description: "상세 분석 보고서" },
   { id: "monitoring", label: "모니터링", icon: Activity, description: "실시간 모니터링" },
+  { id: "data-validation", label: "데이터 검증", icon: Database, description: "데이터 출처 및 검증" },
   { id: "alerts", label: "알림", icon: Bell, description: "시스템 알림" },
 ];
 
@@ -46,6 +48,9 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
       case 'monitoring':
         // 모니터링 섹션 - 모니터링 탭으로 직접 이동
         onTabChange('monitoring');
+        break;
+      case 'data-validation':
+        onTabChange('data-validation');
         break;
       case 'alerts':
         onTabChange('alerts');
